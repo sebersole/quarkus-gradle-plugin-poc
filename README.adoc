@@ -1,0 +1,11 @@
+Proof-of-concept for an end-user Quarkus Gradle plugin
+
+```
+plugins {
+    id 'quarkus`
+}
+
+quarkus {
+
+}
+```

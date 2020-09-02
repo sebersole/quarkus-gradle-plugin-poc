@@ -2,7 +2,7 @@ Proof-of-concept for an end-user Quarkus Gradle plugin
 
 ```
 plugins {
-    id 'quarkus`
+    id 'quarkus-poc`
 }
 
 quarkus {

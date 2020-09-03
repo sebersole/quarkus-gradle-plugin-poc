@@ -1,52 +1,43 @@
 package org.hibernate.build.gradle.quarkus.extension;
 
+import java.io.Serializable;
 import java.util.Locale;
 import java.util.Objects;
 
 import org.gradle.api.Project;
 
-import org.hibernate.build.gradle.quarkus.QuarkusBuildConfig;
+import org.hibernate.build.gradle.quarkus.QuarkusConfigException;
+import org.hibernate.build.gradle.quarkus.QuarkusDsl;
 
 /**
  * Hibernate ORM specific "extension config" object
  *
  * @author Steve Ebersole
  */
-public class HibernateOrmExtensionConfig extends StandardExtensionConfig {
+public class HibernateOrmExtensionDsl extends StandardExtensionDsl implements Serializable {
 	public static final String PROP_PREFIX = "i.forget.the.quarkus.specific.prefix";
 	public static final String FAMILY_PROP = PROP_PREFIX + ".db-family";
 	public static final String URL_PROP = PROP_PREFIX + ".jdbc-url";
 	public static final String USER_PROP = PROP_PREFIX + ".jdbc-user";
 	public static final String PASS_PROP = PROP_PREFIX + ".jdbc-password";
 
-	private final QuarkusBuildConfig quarkusBuildConfig;
-	private final Project project;
-	private final String deploymentConfigName;
-
 	private SupportedDatabaseFamily appliedFamily;
 
-	public HibernateOrmExtensionConfig(String name, QuarkusBuildConfig quarkusBuildConfig) {
+	public HibernateOrmExtensionDsl(String name, QuarkusDsl quarkusDsl) {
 		super( name );
 
-		this.quarkusBuildConfig = quarkusBuildConfig;
-		this.project = quarkusBuildConfig.getProject();
-		this.deploymentConfigName = quarkusBuildConfig.getDeploymentConfiguration().getName();
+		final Project project = quarkusDsl.getProject();
 
-		addModuleDependency( name );
-	}
-
-	private void addModuleDependency(String moduleName) {
-		project.getLogger().lifecycle( "Adding Quarkus module dependency : %5", moduleName );
-
-		final String gav = String.format(
-				Locale.ROOT,
-				"io.quarkus:%s:%s",
-				moduleName,
-				quarkusBuildConfig.getQuarkusVersion()
+		project.afterEvaluate(
+				p -> {
+					if ( appliedFamily == null ) {
+						throw new QuarkusConfigException( "No database-family was specified for hibernate-orm extension" );
+					}
+					quarkusDsl.getModules().maybeCreate( appliedFamily.getContainerName() );
+				}
 		);
-
-		project.getDependencies().add( this.deploymentConfigName, gav );
 	}
+
 
 	public void derby() {
 		databaseFamily( "derby" );
@@ -67,8 +58,6 @@ public class HibernateOrmExtensionConfig extends StandardExtensionConfig {
 
 		if ( family != null ) {
 			applyProperty( FAMILY_PROP, family );
-
-			addModuleDependency( family.getQuarkusModuleName() );
 		}
 
 		appliedFamily = family;
@@ -105,5 +94,52 @@ public class HibernateOrmExtensionConfig extends StandardExtensionConfig {
 
 	public void jdbcPassword(String userName) {
 		applyProperty( PASS_PROP, userName );
+	}
+
+	enum SupportedDatabaseFamily {
+		DERBY( "derby" ),
+		H2( "h2" );
+
+		private final String extensionName;
+		private final String containerName;
+		private final String jdbcUrlProtocol;
+
+		SupportedDatabaseFamily(String simpleName) {
+			this.containerName = "jdbc-" + simpleName;
+			this.extensionName = "quarkus-" + containerName;
+			this.jdbcUrlProtocol = "jdbc:" + simpleName + ":";
+		}
+
+		public String getExtensionName() {
+			return extensionName;
+		}
+
+		public String getContainerName() {
+			return containerName;
+		}
+
+		public static SupportedDatabaseFamily extractFromUrl(String url) {
+			final SupportedDatabaseFamily[] families = SupportedDatabaseFamily.values();
+			//noinspection ForLoopReplaceableByForEach
+			for ( int i = 0; i < families.length; i++ ) {
+				if ( url.startsWith( families[ i ].jdbcUrlProtocol ) ) {
+					return families[ i ];
+				}
+			}
+
+			return null;
+		}
+
+		public static SupportedDatabaseFamily fromName(String name) {
+			if ( DERBY.name().equals( name.toUpperCase( Locale.ROOT ) ) ) {
+				return DERBY;
+			}
+
+			if ( H2.name().equals( name.toUpperCase( Locale.ROOT ) ) ) {
+				return H2;
+			}
+
+			return null;
+		}
 	}
 }

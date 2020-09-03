@@ -1,5 +1,6 @@
 package org.hibernate.build.gradle.quarkus.extension;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -7,7 +8,7 @@ import java.util.Map;
  *
  * @author Steve Ebersole
  */
-public interface ExtensionConfig {
+public interface ExtensionDsl extends Serializable {
 	String getName();
 
 	Map<?,?> getProperties();

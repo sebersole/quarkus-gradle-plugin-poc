@@ -1,11 +1,3 @@
 Proof-of-concept for an end-user Quarkus Gradle plugin
 
-```
-plugins {
-    id 'quarkus-poc`
-}
-
-quarkus {
-
-}
-```
+See the `org.hibernate.build.gradle.quarkus.SimpleTest` test for details

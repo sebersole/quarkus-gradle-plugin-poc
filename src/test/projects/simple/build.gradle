@@ -2,6 +2,10 @@ plugins {
     id 'quarkus-poc'
 }
 
+repositories {
+    mavenCentral()
+}
+
 // QuarkusBuildConfig
 quarkus {
     quarkusLevelConfig = "something"
@@ -10,7 +14,7 @@ quarkus {
     modules {
 
         // NamedDomainObject - `HibernateOrmExtensionConfig(quarkus-hibernate-orm)`
-        hibernateOrm {
+        'hibernate-orm' {
             databaseFamily 'derby'
 
             jdbcUrl 'jdbc:derby:somewhere'
@@ -23,9 +27,8 @@ quarkus {
         }
 
         // NamedDomainObject - `StandardExtensionConfig(quarkus-hibernate-validator)`
-        hibernateValidator {
+        'hibernate-validator' {
             property 'that', 'value'
         }
-
     }
 }

@@ -33,14 +33,12 @@ public class TestHelper {
 	public static GradleRunner createGradleRunner(String projectPath) {
 		final File projectsBaseDirectory = testProjectsBaseDirectory();
 		final File projectDirectory = new File( projectsBaseDirectory, projectPath );
-		final File testKitDir = new File(
-				new File(
-						// this should be the "real" `${buildDir}` directory
-						projectsBaseDirectory.getParentFile().getParentFile().getParentFile(),
-						"tmp"
-				),
-				"test-kit"
+
+		final File tempDir = new File(
+				projectsBaseDirectory.getParentFile().getParentFile(),
+				"tmp"
 		);
+		final File testKitDir = new File( tempDir, "test-kit" );
 
 		final GradleRunner gradleRunner = GradleRunner.create();
 		return gradleRunner
@@ -49,6 +47,7 @@ public class TestHelper {
 				.withTestKitDir( testKitDir )
 				.forwardOutput()
 				.withDebug( true )
+				.withArguments( "--stacktrace" )
 				.withPluginClasspath();
 	}
 

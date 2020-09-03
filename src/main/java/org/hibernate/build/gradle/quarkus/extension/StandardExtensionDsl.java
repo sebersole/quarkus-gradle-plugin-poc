@@ -1,5 +1,6 @@
 package org.hibernate.build.gradle.quarkus.extension;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,11 +9,11 @@ import java.util.Map;
  *
  * @author Steve Ebersole
  */
-public class StandardExtensionConfig implements ExtensionConfig {
+public class StandardExtensionDsl implements ExtensionDsl, Serializable {
 	private final String name;
 	private final Map<Object,Object> properties = new HashMap<>();
 
-	public StandardExtensionConfig(String name) {
+	public StandardExtensionDsl(String name) {
 		this.name = name;
 	}
 

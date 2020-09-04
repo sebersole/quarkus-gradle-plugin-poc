@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
 
 import org.hibernate.build.gradle.quarkus.QuarkusConfigException;
 import org.hibernate.build.gradle.quarkus.QuarkusDsl;
@@ -23,8 +24,8 @@ public class HibernateOrmExtensionDsl extends StandardExtensionDsl implements Se
 
 	private SupportedDatabaseFamily appliedFamily;
 
-	public HibernateOrmExtensionDsl(String name, QuarkusDsl quarkusDsl) {
-		super( name );
+	public HibernateOrmExtensionDsl(ExtensionIdentifier identifier, Configuration dependencyConfiguration, QuarkusDsl quarkusDsl) {
+		super( identifier, dependencyConfiguration, quarkusDsl );
 
 		final Project project = quarkusDsl.getProject();
 
@@ -33,7 +34,9 @@ public class HibernateOrmExtensionDsl extends StandardExtensionDsl implements Se
 					if ( appliedFamily == null ) {
 						throw new QuarkusConfigException( "No database-family was specified for hibernate-orm extension" );
 					}
-					quarkusDsl.getModules().maybeCreate( appliedFamily.getContainerName() );
+
+					final ExtensionIdentifier extensionIdentifier = ExtensionIdentifier.fromArtifactId( appliedFamily.artifactId, quarkusDsl );
+					quarkusDsl.getModules().maybeCreate( extensionIdentifier.getDslContainerName() );
 				}
 		);
 	}
@@ -100,22 +103,12 @@ public class HibernateOrmExtensionDsl extends StandardExtensionDsl implements Se
 		DERBY( "derby" ),
 		H2( "h2" );
 
-		private final String extensionName;
-		private final String containerName;
+		private final String artifactId;
 		private final String jdbcUrlProtocol;
 
 		SupportedDatabaseFamily(String simpleName) {
-			this.containerName = "jdbc-" + simpleName;
-			this.extensionName = "quarkus-" + containerName;
+			this.artifactId = "quarkus-jdbc-" + simpleName;
 			this.jdbcUrlProtocol = "jdbc:" + simpleName + ":";
-		}
-
-		public String getExtensionName() {
-			return extensionName;
-		}
-
-		public String getContainerName() {
-			return containerName;
 		}
 
 		public static SupportedDatabaseFamily extractFromUrl(String url) {

@@ -5,9 +5,10 @@ import javax.inject.Inject;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 
+import org.hibernate.build.gradle.quarkus.extension.ExtensionIdentifier;
+
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_BANNER_LINE;
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_INDENTATION;
-import static org.hibernate.build.gradle.quarkus.Helper.REPORT_INDENTATION_MARKER;
 
 /**
  * @author Steve Ebersole
@@ -23,11 +24,14 @@ public class ShowQuarkusExtensionsTask extends DefaultTask {
 	@TaskAction
 	public void show() {
 		getLogger().lifecycle( REPORT_BANNER_LINE );
-		getLogger().lifecycle( "Quarkus Extensions Applied" );
+		getLogger().lifecycle( "Quarkus Extensions" );
 		getLogger().lifecycle( REPORT_BANNER_LINE );
 
 		buildConfig.getModules().forEach(
-				extensionConfig -> getLogger().lifecycle( REPORT_INDENTATION + REPORT_INDENTATION_MARKER + " " + extensionConfig.getName() )
+				extensionConfig -> {
+					final ExtensionIdentifier extensionIdentifier = extensionConfig.getIdentifier();
+					getLogger().lifecycle( "{} > {}", REPORT_INDENTATION, extensionIdentifier.getQuarkusArtifactId() );
+				}
 		);
 	}
 }

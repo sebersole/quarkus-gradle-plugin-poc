@@ -22,16 +22,14 @@ public class QuarkusPlugin implements Plugin<Project> {
 
 		final ShowQuarkusDependenciesTask showConfigTask = project
 				.getTasks()
-				.create( "showQuarkusDependencies", ShowQuarkusDependenciesTask.class, dsl.getDeploymentConfiguration() );
+				.create( "showQuarkusDependencies", ShowQuarkusDependenciesTask.class, dsl );
 		showConfigTask.setGroup( QUARKUS );
-		showConfigTask.setDescription( "Outputs all dependencies in the Quarkus `" + dsl.getDeploymentConfiguration().getName() + "` Gradle Configuration" );
+		showConfigTask.setDescription( "Outputs all Quarkus extension dependencies" );
 
 		final ShowQuarkusExtensionsTask showExtensionsTask = project
 				.getTasks()
 				.create( "showQuarkusExtensions", ShowQuarkusExtensionsTask.class, dsl );
 		showExtensionsTask.setGroup( QUARKUS );
 		showExtensionsTask.setDescription( "Outputs all Quarkus extensions applied to the build" );
-
-		project.afterEvaluate( p -> dsl.projectEvaluated() );
 	}
 }

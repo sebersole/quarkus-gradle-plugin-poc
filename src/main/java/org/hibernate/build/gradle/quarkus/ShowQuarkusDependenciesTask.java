@@ -17,31 +17,39 @@ import static org.hibernate.build.gradle.quarkus.Helper.REPORT_INDENTATION_MARKE
  * @author Steve Ebersole
  */
 public class ShowQuarkusDependenciesTask extends DefaultTask {
-	private final Configuration configuration;
+	private final QuarkusDsl quarkusDsl;
 
 	@Inject
-	public ShowQuarkusDependenciesTask(Configuration configuration) {
-		this.configuration = configuration;
-		dependsOn( configuration );
+	public ShowQuarkusDependenciesTask(QuarkusDsl quarkusDsl) {
+		this.quarkusDsl = quarkusDsl;
 	}
 
 	@TaskAction
 	public void show() {
+		quarkusDsl.getModules().forEach(
+				extensionDsl -> showConfiguration( extensionDsl.getDependencyConfiguration() )
+		);
+
+		showConfiguration( quarkusDsl.getRuntimeConfiguration() );
+	}
+
+	private void showConfiguration(Configuration dependencyConfiguration) {
 		getLogger().lifecycle( REPORT_BANNER_LINE );
-		getLogger().lifecycle( "Quarkus `" +  configuration.getName() + "` Configuration");
+		getLogger().lifecycle( "Quarkus `" +  dependencyConfiguration.getName() + "` Configuration");
 		getLogger().lifecycle( REPORT_BANNER_LINE );
 
 		getLogger().lifecycle( REPORT_INDENTATION + REPORT_INDENTATION_MARKER + " Dependencies" );
 
-		for ( Dependency dependency : configuration.getAllDependencies() ) {
-			final String coordinate = Helper.coordinate( dependency.getGroup(), dependency.getName(), dependency.getVersion() );
+		for ( Dependency dependency : dependencyConfiguration.getAllDependencies() ) {
+			final String coordinate = Helper.groupArtifactVersion( dependency.getGroup(), dependency.getName(), dependency.getVersion() );
 			getLogger().lifecycle( REPORT_INDENTATION + REPORT_INDENTATION + REPORT_INDENTATION_MARKER + " " + coordinate );
 		}
 
 
+		final Set<File> files = dependencyConfiguration.resolve();
+
 		getLogger().lifecycle( REPORT_INDENTATION + REPORT_INDENTATION_MARKER + " Files" );
 
-		final Set<File> files = configuration.resolve();
 		for ( File file : files ) {
 			getLogger().lifecycle( REPORT_INDENTATION + REPORT_INDENTATION + REPORT_INDENTATION_MARKER + " " + file.getName() );
 		}

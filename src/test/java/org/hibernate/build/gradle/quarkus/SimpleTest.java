@@ -41,13 +41,13 @@ public class SimpleTest {
 		assertThat( buildResult.getOutput(), containsString( "quarkus-hibernate-validator" ) );
 
 		assertThat( buildResult.getOutput(), not( containsString( "io.quarkus:" ) ) );
-		assertThat( buildResult.getOutput(), not( containsString( "caffeine" ) ) );
+		assertThat( buildResult.getOutput(), not( containsString( "hibernate-core" ) ) );
 	}
 
 	@Test
 	public void testShowDependencies() {
 		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "showQuarkusDependencies" );
+				.withArguments( "showQuarkusDependencies", "--stacktrace" );
 
 		final BuildResult buildResult = gradleRunner.build();
 
@@ -58,6 +58,8 @@ public class SimpleTest {
 		assertThat( buildResult.getOutput(), containsString( "io.quarkus:quarkus-hibernate-orm" ) );
 		assertThat( buildResult.getOutput(), containsString( "io.quarkus:quarkus-jdbc-derby" ) );
 		assertThat( buildResult.getOutput(), containsString( "io.quarkus:quarkus-hibernate-validator" ) );
+
+		assertThat( buildResult.getOutput(), containsString( "hibernate-core" ) );
 		assertThat( buildResult.getOutput(), containsString( "caffeine-2.8.5.jar" ) );
 	}
 

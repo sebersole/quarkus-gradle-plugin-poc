@@ -47,7 +47,6 @@ public class TestHelper {
 				.withTestKitDir( testKitDir )
 				.forwardOutput()
 				.withDebug( true )
-				.withArguments( "--stacktrace" )
 				.withPluginClasspath();
 	}
 

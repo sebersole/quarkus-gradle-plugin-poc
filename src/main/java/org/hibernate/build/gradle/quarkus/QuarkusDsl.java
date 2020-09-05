@@ -8,11 +8,16 @@ import java.util.function.Supplier;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.artifacts.dsl.DependencyHandler;
 
-import org.hibernate.build.gradle.quarkus.extension.ExtensionDslCreator;
 import org.hibernate.build.gradle.quarkus.extension.ExtensionDsl;
+import org.hibernate.build.gradle.quarkus.extension.ExtensionDslCreator;
 import org.hibernate.build.gradle.quarkus.extension.ExtensionDslImplementor;
 import org.hibernate.build.gradle.quarkus.extension.ExtensionIdentifier;
+import org.hibernate.build.gradle.quarkus.extension.ExtensionModuleCreationListener;
+
+import static org.hibernate.build.gradle.quarkus.Helper.QUARKUS;
 
 /**
  * Gradle DSL extension for configuring the plugin
@@ -25,31 +30,34 @@ public class QuarkusDsl implements Serializable {
 	private String quarkusLevelConfig;
 
 	private final NamedDomainObjectContainer<ExtensionDslImplementor> modules;
+
+	private final Configuration bomConfiguration;
 	private final Configuration runtimeConfiguration;
 
 	private final Map<String, ExtensionIdentifier> extensionIdentifierMap = new HashMap<>();
-	private final Map<String, String> versionBomMap;
 
-
-	public QuarkusDsl(Project project) {
+	public QuarkusDsl(Project project, ExtensionModuleCreationListener extensionListener) {
 		this.project = project;
+
+		final DependencyHandler dependencyHandler = project.getDependencies();
+		final String bomGav = Helper.groupArtifactVersion( Helper.QUARKUS_GROUP, Helper.QUARKUS_BOM, getQuarkusVersion() );
+		final Dependency bomDependency = dependencyHandler.enforcedPlatform( bomGav );
+
+		this.bomConfiguration = project.getConfigurations().create( "quarkusBom" );
+		dependencyHandler.add( bomConfiguration.getName(), bomDependency );
+
+		this.runtimeConfiguration = project.getConfigurations().create( "quarkusRuntime" );
+		this.runtimeConfiguration.extendsFrom( bomConfiguration );
 
 		this.modules = project.container(
 				ExtensionDslImplementor.class,
-				new ExtensionDslCreator( this )
+				new ExtensionDslCreator(
+						this,
+						extensionListener,
+						bomConfiguration
+				)
 		);
 
-		this.runtimeConfiguration = project.getConfigurations().create( "quarkusRuntime" );
-
-		this.versionBomMap = loadVersionBomMap();
-	}
-
-	private Map<String, String> loadVersionBomMap() {
-		final HashMap<String, String> map = new HashMap<>();
-
-		map.put( "com.github.ben-manes.caffeine:caffeine", "2.8.5" );
-
-		return map;
 	}
 
 	public Project getProject() {
@@ -83,13 +91,5 @@ public class QuarkusDsl implements Serializable {
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public NamedDomainObjectContainer<ExtensionDsl> getModules() {
 		return (NamedDomainObjectContainer) modules;
-	}
-
-	public Map<String, String> getVersionBomMap() {
-		return versionBomMap;
-	}
-
-	public void mapVersion(String moduleName, String version) {
-		versionBomMap.put( moduleName, version );
 	}
 }

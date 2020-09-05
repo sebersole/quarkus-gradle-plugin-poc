@@ -47,7 +47,7 @@ public class SimpleTest {
 	@Test
 	public void testShowDependencies() {
 		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "showQuarkusDependencies", "--stacktrace" );
+				.withArguments( "clean", "showQuarkusDependencies", "--stacktrace" );
 
 		final BuildResult buildResult = gradleRunner.build();
 

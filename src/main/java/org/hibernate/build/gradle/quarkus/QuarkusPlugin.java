@@ -3,6 +3,8 @@ package org.hibernate.build.gradle.quarkus;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
+import org.hibernate.build.gradle.quarkus.extension.ExtensionModuleCreationListener;
+
 import static org.hibernate.build.gradle.quarkus.Helper.QUARKUS;
 
 /**
@@ -14,7 +16,8 @@ public class QuarkusPlugin implements Plugin<Project> {
 		final QuarkusDsl dsl = project.getExtensions().create(
 				QUARKUS,
 				QuarkusDsl.class,
-				project
+				project,
+				(ExtensionModuleCreationListener) extensionDsl -> {}
 		);
 
 		// todo : what tasks are needed?
@@ -31,5 +34,6 @@ public class QuarkusPlugin implements Plugin<Project> {
 				.create( "showQuarkusExtensions", ShowQuarkusExtensionsTask.class, dsl );
 		showExtensionsTask.setGroup( QUARKUS );
 		showExtensionsTask.setDescription( "Outputs all Quarkus extensions applied to the build" );
+
 	}
 }

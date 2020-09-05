@@ -36,9 +36,10 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 	private void showConfiguration(Configuration dependencyConfiguration) {
 		getLogger().lifecycle( REPORT_BANNER_LINE );
 		getLogger().lifecycle( "Quarkus `" +  dependencyConfiguration.getName() + "` Configuration");
+		getLogger().lifecycle( "{} {} - {}", REPORT_INDENTATION, REPORT_INDENTATION, dependencyConfiguration.getDescription() );
 		getLogger().lifecycle( REPORT_BANNER_LINE );
 
-		getLogger().lifecycle( REPORT_INDENTATION + REPORT_INDENTATION_MARKER + " Dependencies" );
+		getLogger().lifecycle( REPORT_INDENTATION + "> Dependencies" );
 
 		for ( Dependency dependency : dependencyConfiguration.getAllDependencies() ) {
 			final String coordinate = Helper.groupArtifactVersion( dependency.getGroup(), dependency.getName(), dependency.getVersion() );

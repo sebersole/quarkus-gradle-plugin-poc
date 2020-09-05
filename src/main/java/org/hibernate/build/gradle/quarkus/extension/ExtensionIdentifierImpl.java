@@ -48,4 +48,9 @@ public class ExtensionIdentifierImpl implements ExtensionIdentifier {
 	public String getCamelCaseName() {
 		return displayName;
 	}
+
+	@Override
+	public String toString() {
+		return getName() + " (" + artifactId + ")";
+	}
 }

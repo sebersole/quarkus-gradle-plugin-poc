@@ -29,12 +29,6 @@ public class StandardExtensionDsl implements ExtensionDslImplementor, Serializab
 		assert ! identifier.getCamelCaseName().contains( "-" );
 
 		this.configuration = dependencyConfiguration;
-
-		// add the extension being configured as a dependency
-		quarkusDsl.getProject().getDependencies().add(
-				configuration.getName(),
-				Helper.quarkusExtensionCoordinates(  identifier, quarkusDsl )
-		);
 	}
 
 	@Override

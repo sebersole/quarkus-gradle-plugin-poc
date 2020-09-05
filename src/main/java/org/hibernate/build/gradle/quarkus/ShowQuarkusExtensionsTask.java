@@ -7,6 +7,7 @@ import org.gradle.api.tasks.TaskAction;
 
 import org.hibernate.build.gradle.quarkus.extension.ExtensionIdentifier;
 
+import static org.hibernate.build.gradle.quarkus.Helper.QUARKUS;
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_BANNER_LINE;
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_INDENTATION;
 
@@ -19,6 +20,8 @@ public class ShowQuarkusExtensionsTask extends DefaultTask {
 	@Inject
 	public ShowQuarkusExtensionsTask(QuarkusDsl buildConfig) {
 		this.buildConfig = buildConfig;
+		setGroup( QUARKUS );
+		setDescription( "Outputs all Quarkus extensions applied to the build" );
 	}
 
 	@TaskAction

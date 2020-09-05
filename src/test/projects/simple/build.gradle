@@ -9,7 +9,12 @@ repositories {
 
 // QuarkusBuildConfig
 quarkus {
-    quarkusLevelConfig = "something"
+    testProfile = "qa"
+
+    nativeArgs {
+        containerBuild true
+        buildImage "that/image:yadda-yadda"
+    }
 
     // NamedDomainObjectContainer
     modules {

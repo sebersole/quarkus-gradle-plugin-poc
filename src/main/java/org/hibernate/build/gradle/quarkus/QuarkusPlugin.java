@@ -23,17 +23,15 @@ public class QuarkusPlugin implements Plugin<Project> {
 		// todo : what tasks are needed?
 		//		- what needs to be done?
 
+		// here are some simple ones...
+
 		final ShowQuarkusDependenciesTask showConfigTask = project
 				.getTasks()
 				.create( "showQuarkusDependencies", ShowQuarkusDependenciesTask.class, dsl );
-		showConfigTask.setGroup( QUARKUS );
-		showConfigTask.setDescription( "Outputs all Quarkus extension dependencies" );
 
 		final ShowQuarkusExtensionsTask showExtensionsTask = project
 				.getTasks()
 				.create( "showQuarkusExtensions", ShowQuarkusExtensionsTask.class, dsl );
-		showExtensionsTask.setGroup( QUARKUS );
-		showExtensionsTask.setDescription( "Outputs all Quarkus extensions applied to the build" );
 
 	}
 }

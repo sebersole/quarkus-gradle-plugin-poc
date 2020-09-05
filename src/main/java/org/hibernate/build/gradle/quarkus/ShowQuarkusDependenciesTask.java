@@ -9,6 +9,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.tasks.TaskAction;
 
+import static org.hibernate.build.gradle.quarkus.Helper.QUARKUS;
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_BANNER_LINE;
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_INDENTATION;
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_INDENTATION_MARKER;
@@ -22,6 +23,8 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 	@Inject
 	public ShowQuarkusDependenciesTask(QuarkusDsl quarkusDsl) {
 		this.quarkusDsl = quarkusDsl;
+		setGroup( QUARKUS );
+		setDescription( "Outputs all Quarkus extension dependencies" );
 	}
 
 	@TaskAction

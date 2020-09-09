@@ -51,6 +51,7 @@ public class QuarkusDsl implements Serializable {
 
 		this.runtimeConfiguration = project.getConfigurations().create( "quarkusRuntime" );
 		this.runtimeConfiguration.extendsFrom( bomConfiguration );
+		this.runtimeConfiguration.setDescription( "Collective dependencies for all applied Quarkus extensions" );
 
 		this.modules = project.container(
 				ExtensionDslImplementor.class,

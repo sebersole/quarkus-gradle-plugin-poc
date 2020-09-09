@@ -2,8 +2,15 @@ package org.hibernate.build.gradle.quarkus;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 
 import org.hibernate.build.gradle.quarkus.extension.ExtensionModuleCreationListener;
+import org.hibernate.build.gradle.quarkus.task.AugmentationTask;
+import org.hibernate.build.gradle.quarkus.task.GenerateFatJarTask;
+import org.hibernate.build.gradle.quarkus.task.GenerateJarTask;
+import org.hibernate.build.gradle.quarkus.task.JandexTask;
+import org.hibernate.build.gradle.quarkus.task.ShowQuarkusDependenciesTask;
+import org.hibernate.build.gradle.quarkus.task.ShowQuarkusExtensionsTask;
 
 import static org.hibernate.build.gradle.quarkus.Helper.QUARKUS;
 
@@ -20,18 +27,28 @@ public class QuarkusPlugin implements Plugin<Project> {
 				(ExtensionModuleCreationListener) extensionDsl -> {}
 		);
 
-		// todo : what tasks are needed?
-		//		- what needs to be done?
+		final JandexTask jandexTask = JandexTask.createTask( dsl );
 
-		// here are some simple ones...
+		final AugmentationTask augmentationTask = AugmentationTask.task( dsl );
+		augmentationTask.dependsOn( jandexTask );
 
-		final ShowQuarkusDependenciesTask showConfigTask = project
-				.getTasks()
-				.create( "showQuarkusDependencies", ShowQuarkusDependenciesTask.class, dsl );
+		final GenerateJarTask jarTask = GenerateJarTask.task( dsl );
+		jarTask.dependsOn( augmentationTask );
 
-		final ShowQuarkusExtensionsTask showExtensionsTask = project
-				.getTasks()
-				.create( "showQuarkusExtensions", ShowQuarkusExtensionsTask.class, dsl );
+		final GenerateFatJarTask fatJarTask = GenerateFatJarTask.task( dsl );
+		fatJarTask.dependsOn( augmentationTask );
 
+
+		final ShowQuarkusDependenciesTask showConfigTask = ShowQuarkusDependenciesTask.task( dsl );
+		final ShowQuarkusExtensionsTask showExtensionsTask = ShowQuarkusExtensionsTask.task( dsl );
+
+		project.subprojects(
+				(subproject) -> {
+					// todo : what do we need to do here for sub-projects?
+					// 		- https://github.com/quarkusio/quarkus/issues/5722
+
+					project.getLogger().lifecycle( "" );
+				}
+		);
 	}
 }

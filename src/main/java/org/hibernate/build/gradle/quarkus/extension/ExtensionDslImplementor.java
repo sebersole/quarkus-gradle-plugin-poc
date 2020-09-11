@@ -1,8 +1,9 @@
 package org.hibernate.build.gradle.quarkus.extension;
 
-import org.gradle.api.artifacts.Configuration;
-
 /**
+ * Not really used at the moment.  Intended to act as the "internal contract" for
+ * extension DSL objects
+ *
  * @author Steve Ebersole
  */
 public interface ExtensionDslImplementor extends ExtensionDsl {

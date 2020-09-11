@@ -7,8 +7,19 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    quarkusVersion = "1.7.1.Final"
+}
+
+dependencies {
+    // example of a non-core BOM
+    quarkusPlatforms enforcedPlatform( "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}" )
+}
+
 // QuarkusBuildConfig
 quarkus {
+    quarkusVersion = project.quarkusVersion
+
     testProfile = "qa"
 
     nativeArgs {

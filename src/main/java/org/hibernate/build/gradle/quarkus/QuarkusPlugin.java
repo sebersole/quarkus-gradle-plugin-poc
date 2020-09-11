@@ -3,7 +3,6 @@ package org.hibernate.build.gradle.quarkus;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.util.GradleVersion;
 
 import org.hibernate.build.gradle.quarkus.extension.ExtensionModuleCreationListener;
@@ -42,7 +41,6 @@ public class QuarkusPlugin implements Plugin<Project> {
 		final GenerateFatJarTask fatJarTask = GenerateFatJarTask.task( dsl );
 		fatJarTask.dependsOn( augmentationTask );
 
-
 		final ShowQuarkusDependenciesTask showConfigTask = ShowQuarkusDependenciesTask.task( dsl );
 		final ShowQuarkusExtensionsTask showExtensionsTask = ShowQuarkusExtensionsTask.task( dsl );
 
@@ -50,8 +48,6 @@ public class QuarkusPlugin implements Plugin<Project> {
 				(subproject) -> {
 					// todo : what do we need to do here for sub-projects?
 					// 		- https://github.com/quarkusio/quarkus/issues/5722
-
-					project.getLogger().lifecycle( "" );
 				}
 		);
 	}

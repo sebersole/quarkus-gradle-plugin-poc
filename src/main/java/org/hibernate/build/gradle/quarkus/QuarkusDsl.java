@@ -10,7 +10,6 @@ import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.util.ConfigureUtil;
 
 import org.hibernate.build.gradle.quarkus.extension.ExtensionDsl;
@@ -36,36 +35,35 @@ public class QuarkusDsl implements Serializable {
 
 	private NativeArguments nativeArgs;
 
+	private final NamedDomainObjectContainer<ExtensionDslImplementor> modules;
+
 	private final Configuration runtimeConfiguration;
 
-	private final NamedDomainObjectContainer<ExtensionDslImplementor> modules;
 	private final Map<String, ExtensionIdentifier> extensionIdentifierMap = new HashMap<>();
 
-	public QuarkusDsl(Project project, ExtensionModuleCreationListener extensionListener) {
+	public QuarkusDsl(
+			Project project,
+			ExtensionModuleCreationListener extensionListener) {
 		this.project = project;
 
-		final DependencyHandler dependencyHandler = project.getDependencies();
+		final Configuration quarkusPlatforms = project.getConfigurations().maybeCreate( "quarkusPlatforms" );
+		quarkusPlatforms.setDescription( "Configuration to specify all Quarkus platforms (BOMs) to be applied" );
 
-		final String bomGav = Helper.groupArtifactVersion( Helper.QUARKUS_GROUP, Helper.QUARKUS_BOM, getQuarkusVersion() );
-
-		// todo : apparently there is a community version and a product version of this BOM.  so we need:
-		//		1) the product BOM GAV
-		//		2) trigger to select one or the other
-		final String bomUniverseGav = Helper.groupArtifactVersion( Helper.QUARKUS_GROUP, Helper.QUARKUS_UNIVERSE_COMMUNITY_BOM, getQuarkusVersion() );
-
-		//noinspection UnstableApiUsage
-		final Configuration bomConfiguration = project.getConfigurations().detachedConfiguration(
-				dependencyHandler.enforcedPlatform( bomGav ),
-				dependencyHandler.enforcedPlatform( bomUniverseGav )
+		// Apply the standard BOM
+		project.getDependencies().add(
+				quarkusPlatforms.getName(),
+				project.getDependencies().enforcedPlatform( Helper.groupArtifactVersion( Helper.QUARKUS_GROUP, Helper.QUARKUS_BOM, getQuarkusVersion() ) )
 		);
+		// todo : apply QUARKUS_UNIVERSE_COMMUNITY_BOM also?
+		//		- for now see the sample test project
 
 		this.runtimeConfiguration = project.getConfigurations().create( "quarkusRuntime" );
-		this.runtimeConfiguration.extendsFrom( bomConfiguration );
+		this.runtimeConfiguration.extendsFrom( quarkusPlatforms );
 		this.runtimeConfiguration.setDescription( "Collective dependencies for all applied Quarkus extensions" );
 
 		this.modules = project.container(
 				ExtensionDslImplementor.class,
-				new ExtensionDslCreator( this, extensionListener, bomConfiguration )
+				new ExtensionDslCreator( this, extensionListener, quarkusPlatforms )
 		);
 	}
 
@@ -132,13 +130,13 @@ public class QuarkusDsl implements Serializable {
 		configurer.execute( getNativeArgs() );
 	}
 
-	public Configuration getRuntimeConfiguration() {
-		return runtimeConfiguration;
-	}
-
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public NamedDomainObjectContainer<ExtensionDsl> getModules() {
 		return (NamedDomainObjectContainer) modules;
+	}
+
+	public Configuration getRuntimeConfiguration() {
+		return runtimeConfiguration;
 	}
 
 	public ExtensionIdentifier resolveExtensionIdentifier(String containerName, Supplier<ExtensionIdentifier> creator) {

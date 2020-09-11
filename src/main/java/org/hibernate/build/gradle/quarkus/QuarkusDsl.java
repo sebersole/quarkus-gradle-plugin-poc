@@ -47,7 +47,17 @@ public class QuarkusDsl implements Serializable {
 		final DependencyHandler dependencyHandler = project.getDependencies();
 
 		final String bomGav = Helper.groupArtifactVersion( Helper.QUARKUS_GROUP, Helper.QUARKUS_BOM, getQuarkusVersion() );
-		final Configuration bomConfiguration = project.getConfigurations().detachedConfiguration( dependencyHandler.enforcedPlatform( bomGav ) );
+
+		// todo : apparently there is a community version and a product version of this BOM.  so we need:
+		//		1) the product BOM GAV
+		//		2) trigger to select one or the other
+		final String bomUniverseGav = Helper.groupArtifactVersion( Helper.QUARKUS_GROUP, Helper.QUARKUS_UNIVERSE_COMMUNITY_BOM, getQuarkusVersion() );
+
+		//noinspection UnstableApiUsage
+		final Configuration bomConfiguration = project.getConfigurations().detachedConfiguration(
+				dependencyHandler.enforcedPlatform( bomGav ),
+				dependencyHandler.enforcedPlatform( bomUniverseGav )
+		);
 
 		this.runtimeConfiguration = project.getConfigurations().create( "quarkusRuntime" );
 		this.runtimeConfiguration.extendsFrom( bomConfiguration );

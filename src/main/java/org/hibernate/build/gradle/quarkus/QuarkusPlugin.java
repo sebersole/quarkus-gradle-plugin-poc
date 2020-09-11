@@ -1,8 +1,10 @@
 package org.hibernate.build.gradle.quarkus;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.util.GradleVersion;
 
 import org.hibernate.build.gradle.quarkus.extension.ExtensionModuleCreationListener;
 import org.hibernate.build.gradle.quarkus.task.AugmentationTask;
@@ -20,6 +22,8 @@ import static org.hibernate.build.gradle.quarkus.Helper.QUARKUS;
 public class QuarkusPlugin implements Plugin<Project> {
 	@Override
 	public void apply(Project project) {
+		verifyGradleVersion();
+
 		final QuarkusDsl dsl = project.getExtensions().create(
 				QUARKUS,
 				QuarkusDsl.class,
@@ -50,5 +54,13 @@ public class QuarkusPlugin implements Plugin<Project> {
 					project.getLogger().lifecycle( "" );
 				}
 		);
+	}
+
+	private void verifyGradleVersion() {
+		if ( GradleVersion.current().compareTo( GradleVersion.version( "5.0" ) ) < 0 ) {
+			throw new GradleException(
+					"Quarkus plugin requires Gradle 5.0 or later. Current version is: " + GradleVersion.current()
+			);
+		}
 	}
 }

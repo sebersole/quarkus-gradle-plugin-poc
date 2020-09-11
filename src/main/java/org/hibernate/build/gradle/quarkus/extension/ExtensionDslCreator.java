@@ -1,18 +1,23 @@
 package org.hibernate.build.gradle.quarkus.extension;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import org.gradle.api.NamedDomainObjectFactory;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ModuleVersionSelector;
+import org.gradle.api.artifacts.ResolvedConfiguration;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 
 import org.hibernate.build.gradle.quarkus.Helper;
 import org.hibernate.build.gradle.quarkus.QuarkusDsl;
 
 import static java.util.Arrays.asList;
+import static org.hibernate.build.gradle.quarkus.Helper.EXTENSION_MARKER_FILE;
 
 /**
  * NamedDomainObjectFactory for ExtensionDsl(Implementor) references
@@ -65,11 +70,46 @@ public class ExtensionDslCreator implements NamedDomainObjectFactory<ExtensionDs
 		dependencyHandler.add( extensionDependencyConfiguration.getName(), extensionGav );
 
 		// register to resolve the Configuration
-		project.afterEvaluate( p -> extensionDependencyConfiguration.resolve() );
+		project.afterEvaluate(
+				p -> {
+					final ResolvedConfiguration resolvedConfiguration = extensionDependencyConfiguration.getResolvedConfiguration();
+					resolvedConfiguration.getResolvedArtifacts().forEach(
+							resolvedArtifact -> {
+								if ( ! "pom".equals( resolvedArtifact.getClassifier() ) ) {
+									final File artifactFile = resolvedArtifact.getFile();
+									if ( isExtension( artifactFile ) ) {
+										//		- create an extension DSL reference
+
+										final ExtensionIdentifier dependencyExtensionIdentifier = ExtensionIdentifier.fromArtifactId(
+												resolvedArtifact.getName(),
+												quarkusDsl
+										);
+
+										if ( dependencyExtensionIdentifier != null ) {
+											quarkusDsl.getModules().maybeCreate( dependencyExtensionIdentifier.getDslContainerName() );
+										}
+									}
+								}
+							}
+					);
+				}
+		);
 
 		final ExtensionDslImplementor extensionDsl = createExtensionDsl( extensionIdentifier, extensionDependencyConfiguration );
 		extensionListener.extensionModuleCreated( extensionDsl );
 		return extensionDsl;
+	}
+
+	private boolean isExtension(File artifactFile) {
+		try {
+			final ZipFile zipFile = new ZipFile( artifactFile );
+			final ZipEntry entry = zipFile.getEntry( EXTENSION_MARKER_FILE );
+			return entry != null;
+		}
+		catch ( IOException e ) {
+			// not a jar?
+			return false;
+		}
 	}
 
 	private ExtensionDslImplementor createExtensionDsl(
@@ -91,33 +131,33 @@ public class ExtensionDslCreator implements NamedDomainObjectFactory<ExtensionDs
 		final Configuration configuration = quarkusDsl.getProject().getConfigurations().create( configName );
 		configuration.setDescription( "Dependencies for the `" + extensionIdentifier.getQuarkusArtifactId() + "` Quarkus extension" );
 
-		// apply handling for Quarkus extensions discovered as part of the dependency graph
-		configuration.resolutionStrategy(
-				resolutionStrategy -> {
-					resolutionStrategy.eachDependency(
-							dependencyResolveDetails -> {
-								final ModuleVersionSelector requestedDetails = dependencyResolveDetails.getRequested();
-
-								if ( "io.quarkus".equals( requestedDetails.getGroup() ) ) {
-									// we have a Quarkus artifact...
-									if ( ! nonExtensionQuarkusArtifactIds.contains( requestedDetails.getName() ) ) {
-										// and it is an "extension" - todo : other criteria to consider here?
-										//		- create an extension DSL reference
-
-										final ExtensionIdentifier dependencyExtensionIdentifier = ExtensionIdentifier.fromArtifactId(
-												requestedDetails.getName(),
-												quarkusDsl
-										);
-
-										if ( dependencyExtensionIdentifier != null ) {
-											quarkusDsl.getModules().maybeCreate( dependencyExtensionIdentifier.getDslContainerName() );
-										}
-									}
-								}
-							}
-					);
-				}
-		);
+//		// apply handling for Quarkus extensions discovered as part of the dependency graph
+//		configuration.resolutionStrategy(
+//				resolutionStrategy -> {
+//					resolutionStrategy.eachDependency(
+//							dependencyResolveDetails -> {
+//								final ModuleVersionSelector requestedDetails = dependencyResolveDetails.getRequested();
+//
+//								if ( "io.quarkus".equals( requestedDetails.getGroup() ) ) {
+//									// we have a Quarkus artifact...
+//									if ( ! nonExtensionQuarkusArtifactIds.contains( requestedDetails.getName() ) ) {
+//										// and it is an "extension" - todo : other criteria to consider here?
+//										//		- create an extension DSL reference
+//
+//										final ExtensionIdentifier dependencyExtensionIdentifier = ExtensionIdentifier.fromArtifactId(
+//												requestedDetails.getName(),
+//												quarkusDsl
+//										);
+//
+//										if ( dependencyExtensionIdentifier != null ) {
+//											quarkusDsl.getModules().maybeCreate( dependencyExtensionIdentifier.getDslContainerName() );
+//										}
+//									}
+//								}
+//							}
+//					);
+//				}
+//		);
 
 		return configuration;
 

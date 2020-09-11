@@ -19,7 +19,7 @@ pluginBundle {
     website = 'http://quarkus.io'
     vcsUrl = 'https://github.com/gradle/gradle'
     description = 'Proof-of-concept Gradle plugin for builds using Quarkus'
-    tags = ['quarkus']
+    tags = ['quarkus', 'graalvm']
 
     plugins {
         plugin {

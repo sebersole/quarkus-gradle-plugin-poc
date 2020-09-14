@@ -5,5 +5,5 @@ package org.hibernate.build.gradle.quarkus.extension;
  */
 @FunctionalInterface
 public interface ExtensionModuleCreationListener {
-	void extensionModuleCreated(ExtensionDsl extensionDsl);
+	void extensionModuleCreated(Extension extension);
 }

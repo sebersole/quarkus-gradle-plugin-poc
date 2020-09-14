@@ -31,12 +31,12 @@ quarkus {
     modules {
 
         // NamedDomainObject - `HibernateOrmExtensionConfig(quarkus-hibernate-orm)`
-        'hibernate-orm' {
+        hibernateOrm() {
             databaseFamily 'derby'
 
             jdbcUrl 'jdbc:derby:somewhere'
             jdbcUsername 'someone'
-            jdbcPassword 'I forget'
+            jdbcPassword 'iForget'
 
             property 'this', 'value'
             property 'that', 'something'
@@ -44,8 +44,14 @@ quarkus {
         }
 
         // NamedDomainObject - `StandardExtensionConfig(quarkus-hibernate-validator)`
-        'hibernate-validator' {
+        hibernateValidator {
+            quarkusArtifact( 'hibernate-validator' )
             property 'that', 'value'
+        }
+
+        // NamedDomainObject - `custom extension`
+        custom1 {
+            artifact( 'joda-time:joda-time:2.10.6' )
         }
     }
 }

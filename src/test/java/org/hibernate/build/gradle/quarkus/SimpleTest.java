@@ -36,12 +36,15 @@ public class SimpleTest {
 		assertThat( taskResult, notNullValue() );
 		assertThat( taskResult.getOutcome(), is( TaskOutcome.SUCCESS ) );
 
-		assertThat( buildResult.getOutput(), containsString( "quarkus-hibernate-orm" ) );
-		assertThat( buildResult.getOutput(), containsString( "quarkus-jdbc-derby" ) );
-		assertThat( buildResult.getOutput(), containsString( "quarkus-hibernate-validator" ) );
+		validateExtensionListOutput( buildResult.getOutput() );
+	}
 
-		assertThat( buildResult.getOutput(), not( containsString( "io.quarkus:" ) ) );
-		assertThat( buildResult.getOutput(), not( containsString( "hibernate-core" ) ) );
+	private void validateExtensionListOutput(String output) {
+		assertThat( output, containsString( "io.quarkus:quarkus-hibernate-orm" ) );
+		assertThat( output, containsString( "io.quarkus:quarkus-jdbc-derby" ) );
+		assertThat( output, containsString( "io.quarkus:quarkus-hibernate-validator" ) );
+
+		assertThat( output, not( containsString( "hibernate-core" ) ) );
 	}
 
 	@Test
@@ -55,12 +58,7 @@ public class SimpleTest {
 		assertThat( taskResult, notNullValue() );
 		assertThat( taskResult.getOutcome(), is( TaskOutcome.SUCCESS ) );
 
-		assertThat( buildResult.getOutput(), containsString( "quarkus-hibernate-orm" ) );
-		assertThat( buildResult.getOutput(), containsString( "quarkus-jdbc-derby" ) );
-		assertThat( buildResult.getOutput(), containsString( "quarkus-hibernate-validator" ) );
-
-		assertThat( buildResult.getOutput(), not( containsString( "io.quarkus:" ) ) );
-		assertThat( buildResult.getOutput(), not( containsString( "hibernate-core" ) ) );
+		validateExtensionListOutput( buildResult.getOutput() );
 	}
 
 	@Test
@@ -85,11 +83,11 @@ public class SimpleTest {
 	@Test
 	public void testShowLimitedDependencies() {
 		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "clean", "showQuarkusDependencies_hibernate-orm", "--stacktrace" );
+				.withArguments( "clean", "showQuarkusDependencies_hibernateOrm", "--stacktrace" );
 
 		final BuildResult buildResult = gradleRunner.build();
 
-		final BuildTask taskResult = buildResult.task( ":showQuarkusDependencies_hibernate-orm" );
+		final BuildTask taskResult = buildResult.task( ":showQuarkusDependencies_hibernateOrm" );
 		assertThat( taskResult, notNullValue() );
 		assertThat( taskResult.getOutcome(), is( TaskOutcome.SUCCESS ) );
 

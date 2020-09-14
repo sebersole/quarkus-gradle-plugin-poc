@@ -7,8 +7,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.gradle.api.GradleException;
-
-import org.hibernate.build.gradle.quarkus.extension.ExtensionIdentifier;
+import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.artifacts.ModuleVersionIdentifier;
+import org.gradle.api.artifacts.ResolvedArtifact;
 
 import static java.util.Arrays.asList;
 
@@ -27,9 +28,6 @@ public class Helper {
 	public static final String QUARKUS_UNIVERSE_COMMUNITY_BOM = "quarkus-universe-bom";
 	public static final String EXTENSION_MARKER_FILE = "META-INF/quarkus-extension.properties";
 
-	public static String quarkusExtensionCoordinates(ExtensionIdentifier id, QuarkusDsl quarkusDsl) {
-		return groupArtifactVersion( QUARKUS_GROUP, id.getQuarkusArtifactId(), quarkusDsl.getQuarkusVersion() );
-	}
 
 	public static String groupArtifact(String group, String artifact) {
 		return String.format(
@@ -48,6 +46,15 @@ public class Helper {
 				artifact,
 				version
 		);
+	}
+
+	public static String groupArtifactVersion(ResolvedArtifact resolvedArtifact) {
+		final ModuleVersionIdentifier identifier = resolvedArtifact.getModuleVersion().getId();
+		return groupArtifactVersion( identifier.getGroup(), identifier.getName(), identifier.getVersion() );
+	}
+
+	public static String groupArtifactVersion(Dependency dependency) {
+		return groupArtifactVersion( dependency.getGroup(), dependency.getName(), dependency.getVersion() );
 	}
 
 	private Helper() {
@@ -69,5 +76,23 @@ public class Helper {
 		}
 
 		return map;
+	}
+
+	public static String extractCamelCaseName(String extensionName) {
+		final StringBuilder buff = new StringBuilder();
+
+		final char[] chars = extensionName.toCharArray();
+		for ( int i = 0; i < chars.length; i++ ) {
+			if ( '-' == chars[ i ] ) {
+				// skip the dash
+				i++;
+				buff.append( Character.toUpperCase( chars[ i ] ) );
+			}
+			else {
+				buff.append( chars[ i ] );
+			}
+		}
+
+		return buff.toString();
 	}
 }

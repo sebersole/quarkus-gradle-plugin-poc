@@ -5,8 +5,8 @@ import java.util.Locale;
 import java.util.Objects;
 
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.Configuration;
 
+import org.hibernate.build.gradle.quarkus.Helper;
 import org.hibernate.build.gradle.quarkus.QuarkusConfigException;
 import org.hibernate.build.gradle.quarkus.QuarkusDsl;
 
@@ -15,7 +15,11 @@ import org.hibernate.build.gradle.quarkus.QuarkusDsl;
  *
  * @author Steve Ebersole
  */
-public class HibernateOrmExtensionDsl extends StandardExtensionDsl implements Serializable {
+public class HibernateOrmExtension extends AbstractExtension implements Serializable {
+	public static final String CONTAINER_NAME = "hibernateOrm";
+
+	public static final String ARTIFACT_ID = "hibernate-orm";
+
 	public static final String PROP_PREFIX = "i.forget.the.quarkus.specific.prefix";
 	public static final String FAMILY_PROP = PROP_PREFIX + ".db-family";
 	public static final String URL_PROP = PROP_PREFIX + ".jdbc-url";
@@ -24,8 +28,21 @@ public class HibernateOrmExtensionDsl extends StandardExtensionDsl implements Se
 
 	private SupportedDatabaseFamily appliedFamily;
 
-	public HibernateOrmExtensionDsl(ExtensionIdentifier identifier, Configuration dependencyConfiguration, QuarkusDsl quarkusDsl) {
-		super( identifier, dependencyConfiguration, quarkusDsl );
+	public HibernateOrmExtension(QuarkusDsl quarkusDsl) {
+		super(
+				CONTAINER_NAME,
+				CONTAINER_NAME,
+				(extension, quarkusDsl1) -> new Artifact(
+						Helper.groupArtifactVersion(
+								Helper.QUARKUS_GROUP,
+								Helper.QUARKUS + "-" + ARTIFACT_ID,
+								quarkusDsl.getQuarkusVersion()
+						),
+						extension,
+						quarkusDsl
+				),
+				quarkusDsl
+		);
 
 		final Project project = quarkusDsl.getProject();
 
@@ -35,12 +52,32 @@ public class HibernateOrmExtensionDsl extends StandardExtensionDsl implements Se
 						throw new QuarkusConfigException( "No database-family was specified for hibernate-orm extension" );
 					}
 
-					final ExtensionIdentifier extensionIdentifier = ExtensionIdentifier.fromArtifactId( appliedFamily.artifactId, quarkusDsl );
-					quarkusDsl.getModules().maybeCreate( extensionIdentifier.getDslContainerName() );
+					final Extension extensionByGav = quarkusDsl.findExtensionByGav( appliedFamily.artifactId );
+					if ( extensionByGav == null ) {
+						// create and register one
+						final TransitiveExtension transitiveExtension = new TransitiveExtension(
+								appliedFamily.artifactId,
+								Helper.groupArtifactVersion(
+										Helper.QUARKUS_GROUP,
+										appliedFamily.artifactId,
+										quarkusDsl.getQuarkusVersion()
+								),
+								quarkusDsl
+						);
+						quarkusDsl.getModules().add( transitiveExtension );
+						quarkusDsl.registerExtensionByGav( appliedFamily.artifactId, transitiveExtension );
+
+						project.getDependencies().add(
+								transitiveExtension.getDependencies().getName(),
+								transitiveExtension.getArtifact().getDependencyNotation()
+						);
+
+						// force the dependency resolution
+						transitiveExtension.getDependencies().getResolvedConfiguration();
+					}
 				}
 		);
 	}
-
 
 	public void derby() {
 		databaseFamily( "derby" );

@@ -7,7 +7,6 @@ import org.gradle.api.Task;
 import org.gradle.api.tasks.TaskAction;
 
 import org.hibernate.build.gradle.quarkus.QuarkusDsl;
-import org.hibernate.build.gradle.quarkus.extension.ExtensionIdentifier;
 
 import static org.hibernate.build.gradle.quarkus.Helper.QUARKUS;
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_BANNER_LINE;
@@ -51,9 +50,9 @@ public class ShowQuarkusExtensionsTask extends DefaultTask {
 		getLogger().lifecycle( REPORT_BANNER_LINE );
 
 		buildConfig.getModules().forEach(
-				extensionConfig -> {
-					final ExtensionIdentifier extensionIdentifier = extensionConfig.getIdentifier();
-					getLogger().lifecycle( "{} > {}", REPORT_INDENTATION, extensionIdentifier.getQuarkusArtifactId() );
+				extension -> {
+					final String artifactId = extension.getArtifact().getDependencyNotation().toString();
+					getLogger().lifecycle( "{} > {}", REPORT_INDENTATION, artifactId );
 				}
 		);
 	}

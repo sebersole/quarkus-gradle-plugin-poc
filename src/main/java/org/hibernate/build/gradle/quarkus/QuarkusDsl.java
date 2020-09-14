@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
@@ -12,11 +11,10 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.util.ConfigureUtil;
 
-import org.hibernate.build.gradle.quarkus.extension.ExtensionDsl;
-import org.hibernate.build.gradle.quarkus.extension.ExtensionDslCreator;
-import org.hibernate.build.gradle.quarkus.extension.ExtensionDslImplementor;
-import org.hibernate.build.gradle.quarkus.extension.ExtensionIdentifier;
+import org.hibernate.build.gradle.quarkus.extension.Extension;
+import org.hibernate.build.gradle.quarkus.extension.ExtensionCreator;
 import org.hibernate.build.gradle.quarkus.extension.ExtensionModuleCreationListener;
+import org.hibernate.build.gradle.quarkus.extension.HibernateOrmExtension;
 
 import groovy.lang.Closure;
 
@@ -35,11 +33,10 @@ public class QuarkusDsl implements Serializable {
 
 	private NativeArguments nativeArgs;
 
-	private final NamedDomainObjectContainer<ExtensionDslImplementor> modules;
+	private final NamedDomainObjectContainer<Extension> modules;
+	private final Map<String, Extension> extensionsByGav = new HashMap<>();
 
 	private final Configuration runtimeConfiguration;
-
-	private final Map<String, ExtensionIdentifier> extensionIdentifierMap = new HashMap<>();
 
 	public QuarkusDsl(
 			Project project,
@@ -62,8 +59,8 @@ public class QuarkusDsl implements Serializable {
 		this.runtimeConfiguration.setDescription( "Collective dependencies for all applied Quarkus extensions" );
 
 		this.modules = project.container(
-				ExtensionDslImplementor.class,
-				new ExtensionDslCreator( this, extensionListener, quarkusPlatforms )
+				Extension.class,
+				new ExtensionCreator( this, extensionListener, quarkusPlatforms )
 		);
 	}
 
@@ -130,16 +127,28 @@ public class QuarkusDsl implements Serializable {
 		configurer.execute( getNativeArgs() );
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public NamedDomainObjectContainer<ExtensionDsl> getModules() {
-		return (NamedDomainObjectContainer) modules;
+	public NamedDomainObjectContainer<Extension> getModules() {
+		return modules;
+	}
+
+	public void modules(Closure<Extension> extensionClosure) {
+		ConfigureUtil.configure( extensionClosure, modules );
+	}
+
+	public HibernateOrmExtension hibernateOrm() {
+		return new HibernateOrmExtension( this );
 	}
 
 	public Configuration getRuntimeConfiguration() {
 		return runtimeConfiguration;
 	}
 
-	public ExtensionIdentifier resolveExtensionIdentifier(String containerName, Supplier<ExtensionIdentifier> creator) {
-		return extensionIdentifierMap.computeIfAbsent( containerName, s -> creator.get() );
+	public Extension findExtensionByGav(String gav) {
+		return extensionsByGav.get( gav );
+	}
+
+	public void registerExtensionByGav(String gav, Extension extension) {
+		final Extension existing = extensionsByGav.put( gav, extension );
+		assert existing == null;
 	}
 }

@@ -12,7 +12,7 @@ import org.gradle.api.tasks.TaskAction;
 
 import org.hibernate.build.gradle.quarkus.Helper;
 import org.hibernate.build.gradle.quarkus.QuarkusDsl;
-import org.hibernate.build.gradle.quarkus.extension.ExtensionDsl;
+import org.hibernate.build.gradle.quarkus.extension.Extension;
 
 import static org.hibernate.build.gradle.quarkus.Helper.QUARKUS;
 import static org.hibernate.build.gradle.quarkus.Helper.REPORT_BANNER_LINE;
@@ -55,11 +55,11 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 						final int delimiterPosition = taskName.indexOf( '_' );
 						assert delimiterPosition > 1;
 						final String extensionName = taskName.substring( delimiterPosition + 1 );
-						final ExtensionDsl extensionInfo = quarkusDsl.getModules().getByName( extensionName );
+						final Extension extensionInfo = quarkusDsl.getModules().getByName( extensionName );
 
 						final Task task = quarkusDsl.getProject().task( taskName );
 						task.doLast(
-								(task1) -> showConfiguration( extensionInfo.getDependencyConfiguration() )
+								(task1) -> showConfiguration( extensionInfo.getDependencies() )
 						);
 					}
 				}
@@ -69,7 +69,7 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 	@TaskAction
 	public void show() {
 		quarkusDsl.getModules().forEach(
-				extensionDsl -> showConfiguration( extensionDsl.getDependencyConfiguration() )
+				extension -> showConfiguration( extension.getDependencies() )
 		);
 
 		showConfiguration( quarkusDsl.getRuntimeConfiguration() );

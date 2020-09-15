@@ -9,28 +9,48 @@ plugins {
     id 'org.hibernate.build.maven-repo-auth' version '3.0.4'
 }
 
+ext {
+    pluginId = 'sebersole.quarkus.plugin-poc'
+    pluginVersion = '0.0.6.7'
+}
+
+// For publishing testing snapshots
+
+group 'com.github.sebersole'
+version project.pluginVersion
 
 gradlePlugin {
     plugins {
         plugin {
-            id = 'quarkus-poc'
-            implementationClass = 'org.hibernate.build.gradle.quarkus.QuarkusPlugin'
+            id = project.pluginId
+            implementationClass = 'com.github.sebersole.gradle.quarkus.QuarkusPlugin'
         }
     }
 }
 
 pluginBundle {
-    website = 'http://quarkus.io'
-    vcsUrl = 'https://github.com/gradle/gradle'
-    description = 'Proof-of-concept Gradle plugin for builds using Quarkus'
+    ext {
+        pluginUrl = 'https://github.com/sebersole/quarkus-gradle-plugin-poc'
+        pluginDescription = 'Proof-of-concept Gradle plugin for builds using Quarkus'
+    }
+    website = ext.pluginUrl
+    vcsUrl = ext.pluginUrl
+    description = ext.pluginDescription
     tags = ['quarkus', 'graalvm']
 
     plugins {
         plugin {
             // id is captured from java-gradle-plugin configuration
-            displayName = 'Proof-of-concept Gradle plugin for builds using Quarkus'
+            displayName = pluginDescription
         }
     }
+}
+
+if ( version.toString().endsWith( '-SNAPSHOT' ) ) {
+    tasks.publishPlugins.enabled = false
+}
+else {
+    tasks.publish.enabled = false
 }
 
 repositories {
@@ -59,17 +79,9 @@ sourceSets {
 }
 
 
-// For publishing testing snapshots
-
-group 'org.hibernate.build.gradle'
-version '1.0.0-SNAPSHOT'
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // for publishing snapshots
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if ( version.toString().endsWith( '-SNAPSHOT' ) ) {
-    tasks.publishPlugins.enabled = false
-}
 
 publishing {
     publications {
@@ -86,6 +98,10 @@ publishing {
     }
 }
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+javadoc {
+    options.addStringOption( 'Xdoclint:none', '-quiet' )
+}
 
 
 // Configure wrapper to download the full Gradle distribution

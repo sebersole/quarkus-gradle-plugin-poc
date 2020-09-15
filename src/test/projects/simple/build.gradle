@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'quarkus-poc'
+    id 'sebersole.quarkus.plugin-poc'
 }
 
 repositories {
@@ -16,7 +16,6 @@ dependencies {
     quarkusPlatforms enforcedPlatform( "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}" )
 }
 
-// QuarkusBuildConfig
 quarkus {
     quarkusVersion = project.quarkusVersion
 
@@ -27,31 +26,27 @@ quarkus {
         buildImage "that/image:yadda-yadda"
     }
 
-    // NamedDomainObjectContainer
+    // alternative way to register platforms through the DSL
+    //      - handled as an `#enforcedPlatform`
+    platform "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}"
+
     modules {
-
-        // NamedDomainObject - `HibernateOrmExtensionConfig(quarkus-hibernate-orm)`
-        hibernateOrm() {
-            databaseFamily 'derby'
-
-            jdbcUrl 'jdbc:derby:somewhere'
-            jdbcUsername 'someone'
-            jdbcPassword 'iForget'
-
-            property 'this', 'value'
-            property 'that', 'something'
-            property 'another', 'somewhere'
+        hibernateOrm {
+            derby()
         }
 
-        // NamedDomainObject - `StandardExtensionConfig(quarkus-hibernate-validator)`
         hibernateValidator {
             quarkusArtifact( 'hibernate-validator' )
-            property 'that', 'value'
         }
 
-        // NamedDomainObject - `custom extension`
+        quarkusExtension( "jdbcDerby", "jdbc-derby" )
+
         custom1 {
-            artifact( 'joda-time:joda-time:2.10.6' )
+            artifact 'joda-time:joda-time:2.10.6'
+        }
+
+        extension( 'custom2' ) {
+            artifact 'org.junit.jupiter:junit-jupiter-api:5.3.1'
         }
     }
 }

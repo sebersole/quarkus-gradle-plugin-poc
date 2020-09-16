@@ -2,8 +2,6 @@ package com.github.sebersole.gradle.quarkus.extension;
 
 import java.io.Serializable;
 
-import com.github.sebersole.gradle.quarkus.Artifact;
-import com.github.sebersole.gradle.quarkus.Extension;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
 
 /**

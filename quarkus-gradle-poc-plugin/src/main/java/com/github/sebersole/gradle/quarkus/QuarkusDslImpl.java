@@ -13,7 +13,8 @@ import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.util.ConfigureUtil;
 
-import com.github.sebersole.gradle.quarkus.extension.ExtensionCreator;
+import com.github.sebersole.gradle.quarkus.extension.Extension;
+import com.github.sebersole.gradle.quarkus.extension.ExtensionFactory;
 import groovy.lang.Closure;
 
 /**
@@ -23,7 +24,7 @@ import groovy.lang.Closure;
  */
 public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implements QuarkusDsl, BuildDetails {
 	private final Project project;
-	private final ExtensionCreator extensionCreator;
+	private final ExtensionFactory extensionFactory;
 
 	private String quarkusVersion = "1.7.1.Final";
 	private File workingDir = new File( "/tmp" );
@@ -37,7 +38,7 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 
 	private final Configuration quarkusPlatforms;
 
-	private final Configuration runtimeConfiguration;
+	private final Configuration runtimeDependencies;
 	private final Configuration deploymentDependencies;
 
 
@@ -54,16 +55,16 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 		);
 		// todo : apply QUARKUS_UNIVERSE_COMMUNITY_BOM also?
 
-		this.runtimeConfiguration = project.getConfigurations().create( "quarkusRuntime" );
-		this.runtimeConfiguration.extendsFrom( quarkusPlatforms );
-		this.runtimeConfiguration.setDescription( "Collective runtime dependencies for all applied Quarkus extensions" );
+		this.runtimeDependencies = project.getConfigurations().create( "quarkusRuntime" );
+		this.runtimeDependencies.extendsFrom( quarkusPlatforms );
+		this.runtimeDependencies.setDescription( "Collective runtime dependencies for all applied Quarkus extensions" );
 
 		this.deploymentDependencies = project.getConfigurations().create( "quarkusDeployment" );
 		this.deploymentDependencies.extendsFrom( quarkusPlatforms );
 		this.deploymentDependencies.setDescription( "Collective deployment dependencies for all applied Quarkus extensions" );
 
-		this.extensionCreator = new ExtensionCreator( this, quarkusPlatforms );
-		this.extensions = project.container( Extension.class, extensionCreator );
+		this.extensionFactory = new ExtensionFactory( this, quarkusPlatforms );
+		this.extensions = project.container( Extension.class, extensionFactory );
 	}
 
 	@Override
@@ -197,8 +198,8 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 	}
 
 	@Override
-	public Configuration getRuntimeConfiguration() {
-		return runtimeConfiguration;
+	public Configuration getRuntimeDependencies() {
+		return runtimeDependencies;
 	}
 
 	@Override
@@ -228,6 +229,6 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 
 	@Override
 	public BiConsumer<Extension, QuarkusDsl> getCreatedExtensionPreparer() {
-		return extensionCreator::prepareExtension;
+		return extensionFactory::prepareExtension;
 	}
 }

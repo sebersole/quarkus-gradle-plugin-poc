@@ -1,4 +1,4 @@
-package com.github.sebersole.gradle.quarkus;
+package com.github.sebersole.gradle.quarkus.extension;
 
 import org.gradle.api.Action;
 import org.gradle.api.Named;

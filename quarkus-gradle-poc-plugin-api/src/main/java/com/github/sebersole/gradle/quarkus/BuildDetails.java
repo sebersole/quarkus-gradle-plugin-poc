@@ -13,5 +13,6 @@ public interface BuildDetails {
 	String getQuarkusVersion();
 	File getWorkingDirectory();
 	Configuration getPlatforms();
-	NativeArguments getNativeArgs();
+	Configuration getRuntimeDependencies();
+	Configuration getDeploymentDependencies();
 }

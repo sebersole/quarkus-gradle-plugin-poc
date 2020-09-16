@@ -5,8 +5,6 @@ import java.util.Locale;
 
 import org.gradle.api.Project;
 
-import com.github.sebersole.gradle.quarkus.Artifact;
-import com.github.sebersole.gradle.quarkus.Extension;
 import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.QuarkusConfigException;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;

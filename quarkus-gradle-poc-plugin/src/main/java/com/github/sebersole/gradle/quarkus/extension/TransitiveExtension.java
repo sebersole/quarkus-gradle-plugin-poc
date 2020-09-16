@@ -1,6 +1,5 @@
 package com.github.sebersole.gradle.quarkus.extension;
 
-import com.github.sebersole.gradle.quarkus.Artifact;
 import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
 

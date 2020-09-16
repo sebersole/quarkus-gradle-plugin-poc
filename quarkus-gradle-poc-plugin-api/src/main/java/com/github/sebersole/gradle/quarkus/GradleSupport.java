@@ -8,9 +8,4 @@ public interface GradleSupport {
 	 * Return {@code null} to indicate no indexing is needed on behalf of this extension
 	 */
 	Indexer createIndexer(BuildDetails quarkusDsl);
-
-	/**
-	 * Return {@code null} to indicate that the normal type resolution should occur
-	 */
-	Extension createExtension(BuildDetails quarkusDsl);
 }

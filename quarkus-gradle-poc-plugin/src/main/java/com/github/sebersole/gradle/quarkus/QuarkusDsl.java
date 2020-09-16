@@ -9,6 +9,7 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 
+import com.github.sebersole.gradle.quarkus.extension.Extension;
 import com.github.sebersole.gradle.quarkus.extension.ExtensionCreationShortCuts;
 import groovy.lang.Closure;
 
@@ -52,6 +53,6 @@ public interface QuarkusDsl extends ExtensionCreationShortCuts, Serializable {
 	void extensions(Closure<NamedDomainObjectContainer<Extension>> extensionClosure);
 	void extensions(Action<NamedDomainObjectContainer<Extension>> action);
 
-	Configuration getRuntimeConfiguration();
+	Configuration getRuntimeDependencies();
 	Configuration getDeploymentDependencies();
 }

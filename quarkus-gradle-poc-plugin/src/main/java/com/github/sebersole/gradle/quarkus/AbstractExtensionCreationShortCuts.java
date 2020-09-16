@@ -5,6 +5,7 @@ import java.util.function.BiConsumer;
 import org.gradle.api.Action;
 import org.gradle.util.ConfigureUtil;
 
+import com.github.sebersole.gradle.quarkus.extension.Extension;
 import com.github.sebersole.gradle.quarkus.extension.ExtensionCreationShortCuts;
 import com.github.sebersole.gradle.quarkus.extension.HibernateOrmExtension;
 import groovy.lang.Closure;

@@ -7,8 +7,6 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.util.ConfigureUtil;
 
-import com.github.sebersole.gradle.quarkus.Artifact;
-import com.github.sebersole.gradle.quarkus.Extension;
 import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.QuarkusDsl;
 

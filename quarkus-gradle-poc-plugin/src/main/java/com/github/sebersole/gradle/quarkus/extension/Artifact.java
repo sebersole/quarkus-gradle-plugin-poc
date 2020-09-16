@@ -1,4 +1,4 @@
-package com.github.sebersole.gradle.quarkus;
+package com.github.sebersole.gradle.quarkus.extension;
 
 /**
  * A wrapper around a (possibly not yet resolved) dependency that contains the extension

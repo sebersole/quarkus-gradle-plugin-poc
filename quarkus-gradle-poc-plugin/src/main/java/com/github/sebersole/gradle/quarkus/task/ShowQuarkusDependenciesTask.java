@@ -10,7 +10,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.tasks.TaskAction;
 
-import com.github.sebersole.gradle.quarkus.Extension;
+import com.github.sebersole.gradle.quarkus.extension.Extension;
 import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
 
@@ -70,9 +70,6 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 		quarkusDsl.getQuarkusExtensions().forEach(
 				extension -> showExtension( extension )
 		);
-
-		showConfiguration( quarkusDsl.getRuntimeConfiguration() );
-		showConfiguration( quarkusDsl.getDeploymentDependencies() );
 	}
 
 	private void showExtension(Extension extension) {
@@ -86,15 +83,13 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 
 	private void showConfiguration(Configuration dependencies) {
 		getLogger().lifecycle(
-				"{}{} - Dependencies ({})",
-				REPORT_INDENTATION,
+				"{} - Dependencies ({})",
 				REPORT_INDENTATION,
 				dependencies.getName()
 		);
 
 		getLogger().lifecycle(
-				"{}{}{} > Artifacts",
-				REPORT_INDENTATION,
+				"{}{} > Artifacts",
 				REPORT_INDENTATION,
 				REPORT_INDENTATION
 		);
@@ -102,8 +97,7 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 		for ( Dependency dependency : dependencies.getAllDependencies() ) {
 			final String coordinate = Helper.groupArtifactVersion( dependency.getGroup(), dependency.getName(), dependency.getVersion() );
 			getLogger().lifecycle(
-					"{}{}{}{}- {}",
-					REPORT_INDENTATION,
+					"{}{}{}- {}",
 					REPORT_INDENTATION,
 					REPORT_INDENTATION,
 					REPORT_INDENTATION,
@@ -112,8 +106,7 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 		}
 
 		getLogger().lifecycle(
-				"{}{}{} > Files",
-				REPORT_INDENTATION,
+				"{}{} > Files",
 				REPORT_INDENTATION,
 				REPORT_INDENTATION
 		);
@@ -121,10 +114,8 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 		final Set<File> files = dependencies.resolve();
 
 		for ( File file : files ) {
-
 			getLogger().lifecycle(
-					"{}{}{}{}- {}",
-					REPORT_INDENTATION,
+					"{}{}{}- {}",
 					REPORT_INDENTATION,
 					REPORT_INDENTATION,
 					REPORT_INDENTATION,

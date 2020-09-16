@@ -2,7 +2,6 @@ package com.github.sebersole.gradle.quarkus.extension;
 
 import org.gradle.api.Action;
 
-import com.github.sebersole.gradle.quarkus.Extension;
 import groovy.lang.Closure;
 
 /**

@@ -17,8 +17,6 @@ import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.artifacts.ResolvedConfiguration;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 
-import com.github.sebersole.gradle.quarkus.Artifact;
-import com.github.sebersole.gradle.quarkus.Extension;
 import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.Logging;
 import com.github.sebersole.gradle.quarkus.QuarkusDsl;
@@ -31,12 +29,12 @@ import static com.github.sebersole.gradle.quarkus.Helper.EXTENSION_MARKER_FILE;
  *
  * @author Steve Ebersole
  */
-public class ExtensionCreator implements NamedDomainObjectFactory<Extension>, Serializable {
+public class ExtensionFactory implements NamedDomainObjectFactory<Extension>, Serializable {
 	private final QuarkusDslImpl quarkusDsl;
 
 	private final Configuration bomConfiguration;
 
-	public ExtensionCreator(QuarkusDslImpl quarkusDsl, Configuration bomConfiguration) {
+	public ExtensionFactory(QuarkusDslImpl quarkusDsl, Configuration bomConfiguration) {
 		this.quarkusDsl = quarkusDsl;
 		this.bomConfiguration = bomConfiguration;
 	}
@@ -69,7 +67,7 @@ public class ExtensionCreator implements NamedDomainObjectFactory<Extension>, Se
 		extension.getRuntimeDependencies().extendsFrom( bomConfiguration );
 		extension.getDeploymentDependencies().extendsFrom( bomConfiguration );
 
-		quarkusDsl.getRuntimeConfiguration().extendsFrom( extension.getRuntimeDependencies() );
+		quarkusDsl.getRuntimeDependencies().extendsFrom( extension.getRuntimeDependencies() );
 		quarkusDsl.getDeploymentDependencies().extendsFrom( extension.getDeploymentDependencies() );
 
 		// register to resolve the Configuration

@@ -4,6 +4,7 @@ import org.gradle.api.Action;
 import org.gradle.api.Named;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.file.SourceDirectorySet;
 
 import groovy.lang.Closure;
 
@@ -50,4 +51,6 @@ public interface Extension extends Named {
 	Dependency deploymentDependency(Object notation);
 	void deploymentDependency(Object notation, Closure<Dependency> closure);
 	void deploymentDependency(Object notation, Action<Dependency> action);
+
+	void index(SourceDirectorySet sources);
 }

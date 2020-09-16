@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Locale;
 
 import org.gradle.api.Project;
+import org.gradle.api.file.SourceDirectorySet;
 
 import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.QuarkusConfigException;
@@ -96,6 +97,11 @@ public class HibernateOrmExtension extends AbstractExtension implements Serializ
 
 	public void databaseFamily(String familyName) {
 		appliedFamily = SupportedDatabaseFamily.fromName( familyName );
+	}
+
+	@Override
+	public void index(SourceDirectorySet sources) {
+		// todo : index ORM and JPA annotations
 	}
 
 	enum SupportedDatabaseFamily {

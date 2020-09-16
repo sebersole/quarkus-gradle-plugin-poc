@@ -28,10 +28,11 @@ public class QuarkusPlugin implements Plugin<Project> {
 				project
 		);
 
-		final JandexTask jandexTask = JandexTask.createTask( dsl );
+		final JandexTask[] jandexTasks = JandexTask.apply( dsl );
 
 		final AugmentationTask augmentationTask = AugmentationTask.task( dsl );
-		augmentationTask.dependsOn( jandexTask );
+		//noinspection RedundantCast
+		augmentationTask.dependsOn( (Object[]) jandexTasks );
 
 		final GenerateJarTask jarTask = GenerateJarTask.task( dsl );
 		jarTask.dependsOn( augmentationTask );
@@ -41,13 +42,6 @@ public class QuarkusPlugin implements Plugin<Project> {
 
 		final ShowQuarkusDependenciesTask showConfigTask = ShowQuarkusDependenciesTask.task( dsl );
 		final ShowQuarkusExtensionsTask showExtensionsTask = ShowQuarkusExtensionsTask.task( dsl );
-
-		project.subprojects(
-				(subproject) -> {
-					// todo : what do we need to do here for sub-projects?
-					// 		- https://github.com/quarkusio/quarkus/issues/5722
-				}
-		);
 	}
 
 	private void verifyGradleVersion() {

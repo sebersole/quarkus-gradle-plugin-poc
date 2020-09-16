@@ -1,7 +1,9 @@
 package com.github.sebersole.gradle.quarkus.task;
 
 import java.io.File;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -12,15 +14,16 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.plugins.Convention;
+import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskAction;
 
+import com.github.sebersole.gradle.quarkus.Indexer;
+import com.github.sebersole.gradle.quarkus.IndexingSupport;
 import com.github.sebersole.gradle.quarkus.Logging;
-import com.github.sebersole.gradle.quarkus.QuarkusDsl;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
 
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
@@ -29,19 +32,34 @@ import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
  * @author Steve Ebersole
  */
 public class JandexTask extends DefaultTask {
-	public static JandexTask createTask(QuarkusDslImpl dsl) {
-		final JandexTask  jandexTask = dsl.getProject()
-				.getTasks()
-				.create( TASK_NAME, JandexTask.class, dsl );
-		jandexTask.setGroup( QUARKUS );
-		jandexTask.setDescription( "Generates a Jandex index in preparation for augmentation" );
 
-		return jandexTask;
+	public static JandexTask[] apply(QuarkusDslImpl dsl) {
+		final List<JandexTask> tasks = new ArrayList<>();
+		apply( dsl.getProject(), dsl, tasks::add );
+		return tasks.toArray( new JandexTask[0] );
+	}
+
+	private static void apply(Project project, QuarkusDslImpl dsl, Consumer<JandexTask> taskConsumer) {
+		if ( project.getPlugins().hasPlugin( JavaPlugin.class ) ) {
+			final JandexTask jandexTask = project
+					.getTasks()
+					.create( TASK_NAME, JandexTask.class, project, dsl );
+			jandexTask.setGroup( QUARKUS );
+			jandexTask.setDescription( "Generates a Jandex index in preparation for augmentation" );
+
+			taskConsumer.accept( jandexTask );
+		}
+
+		project.subprojects( subProject -> apply( subProject, dsl, taskConsumer ) );
 	}
 
 	public static final String TASK_NAME = "quarkusJandex";
+	public static final String INDEX_FILE_PATH = "META-INF/jandex.idx";
 
-	private File outputDirectory;
+	private final Project project;
+	private final QuarkusDslImpl quarkusDsl;
+
+	private final File outputDirectory;
 
 	// todo : do these indexes need to be kept per-project?  Or is one big index better?
 
@@ -50,15 +68,17 @@ public class JandexTask extends DefaultTask {
 	private Set<SourceDirectorySet> sourcesToIndex;
 
 	@Inject
-	public JandexTask(QuarkusDslImpl quarkusDsl) {
-		final Project project = quarkusDsl.getProject();
+	public JandexTask(Project project, QuarkusDslImpl quarkusDsl) {
 		assert project != null : "Project was null";
+		this.project = project;
+		this.quarkusDsl = quarkusDsl;
 
-		this.sourcesToIndex = new HashSet<>();
-		applyProject( project, this.sourcesToIndex::add, quarkusDsl );
+		final SourceSet mainSourceSet = resolveMainSourceSet( project );
+		// atm we only support indexing the main source-set
+		this.sourcesToIndex = Collections.singleton( mainSourceSet.getAllJava() );
 
-		final File quarkusOutputDirectory = new File( project.getBuildDir(), "quarkus" );
-		this.outputDirectory = new File( quarkusOutputDirectory, "jandex" );
+		final File resourcesOutputDir = new File( new File( project.getBuildDir(), "resources" ), "main" );
+		this.outputDirectory = new File( resourcesOutputDir, INDEX_FILE_PATH );
 
 		doFirst( JandexTask::makeOutputDirectory );
 	}
@@ -70,41 +90,28 @@ public class JandexTask extends DefaultTask {
 		( (JandexTask) task ).outputDirectory.mkdirs();
 	}
 
-	private static void applyProject(
-			Project project,
-			Consumer<SourceDirectorySet> sourceDirectorySetConsumer,
-			QuarkusDsl quarkusDsl) {
+	private static SourceSet resolveMainSourceSet(Project project) {
 		final Convention convention = project.getConvention();
 
 		final JavaPluginConvention javaPluginConvention = convention.findPlugin( JavaPluginConvention.class );
 		if ( javaPluginConvention == null ) {
 			Logging.LOGGER.debug( "Skipping project `{}`; it defined no JavaPluginConvention", project.getPath() );
-		}
-		else {
-			final SourceSetContainer sourceSets = javaPluginConvention.getSourceSets();
-
-			final SourceSet mainSourceSet = sourceSets.findByName( "main" );
-			if ( mainSourceSet == null ) {
-				Logging.LOGGER.debug( "Skipping project `{}`; it defined no `main` SourceSet", project.getPath() );
-			}
-			else {
-				Logging.LOGGER.debug( "Adding main SourceSet ({})", project.getPath() );
-				sourceDirectorySetConsumer.accept( mainSourceSet.getAllJava() );
-			}
+			return null;
 		}
 
-		project.getSubprojects().forEach(
-				subproject -> applyProject( subproject, sourceDirectorySetConsumer, quarkusDsl )
-		);
+		final SourceSet mainSourceSet = javaPluginConvention.getSourceSets().findByName( "main" );
+		if ( mainSourceSet == null ) {
+			Logging.LOGGER.debug( "Skipping project `{}`; it defined no `main` SourceSet", project.getPath() );
+			return null;
+		}
+
+		Logging.LOGGER.debug( "Adding main SourceSet ({})", project.getPath() );
+		return mainSourceSet;
 	}
 
 	@OutputDirectory
 	public File getOutputDirectory() {
 		return outputDirectory;
-	}
-
-	public void setOutputDirectory(File outputDirectory) {
-		this.outputDirectory = outputDirectory;
 	}
 
 	@InputFiles
@@ -118,6 +125,10 @@ public class JandexTask extends DefaultTask {
 
 	@TaskAction
 	public void generateIndex() {
+		quarkusDsl.getQuarkusExtensions().forEach(
+				extension -> sourcesToIndex.forEach( extension::index )
+		);
+
 		getLogger().lifecycle( "########################################################" );
 		getLogger().lifecycle( "Generating Quarkus Jandex index" );
 		getLogger().lifecycle( "########################################################" );

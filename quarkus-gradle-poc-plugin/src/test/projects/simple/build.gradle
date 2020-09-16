@@ -1,0 +1,52 @@
+plugins {
+    id 'java'
+    id 'sebersole.quarkus.plugin-poc'
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    quarkusVersion = "1.7.1.Final"
+}
+
+dependencies {
+    // example of a non-core BOM
+    quarkusPlatforms enforcedPlatform( "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}" )
+}
+
+quarkus {
+    quarkusVersion = project.quarkusVersion
+
+    testProfile = "qa"
+
+    nativeArgs {
+        containerBuild true
+        buildImage "that/image:yadda-yadda"
+    }
+
+    // alternative way to register platforms through the DSL
+    //      - handled as an `#enforcedPlatform`
+    platform "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}"
+
+    quarkusExtensions {
+        hibernateOrm {
+            derby()
+        }
+
+        hibernateValidator {
+            quarkusArtifact( 'hibernate-validator' )
+        }
+
+        quarkusExtension( "jdbcDerby", "jdbc-derby" )
+
+        jodaTime {
+            artifact 'joda-time:joda-time:2.10.6'
+        }
+
+        extension( 'junitJupiter' ) {
+            artifact 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+        }
+    }
+}

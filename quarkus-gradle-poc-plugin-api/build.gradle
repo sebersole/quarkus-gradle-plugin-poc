@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+}
+
+apply from: rootProject.file( 'gradle/base-information.gradle' )
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile gradleApi()
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}

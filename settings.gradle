@@ -1,2 +1,5 @@
-rootProject.name = 'quarkus-gradle-plugin-poc'
+rootProject.name = 'quarkus-gradle-poc'
+
+include 'quarkus-gradle-poc-plugin-api'
+include 'quarkus-gradle-poc-plugin'
 

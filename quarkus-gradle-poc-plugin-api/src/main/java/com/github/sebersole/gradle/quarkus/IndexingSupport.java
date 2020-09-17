@@ -7,5 +7,5 @@ public interface IndexingSupport {
 	/**
 	 * Return {@code null} to indicate no indexing is needed on behalf of this extension
 	 */
-	Indexer createIndexer(BuildDetails quarkusDsl);
+	IndexConsumer createIndexConsumer(BuildDetails buildDetails);
 }

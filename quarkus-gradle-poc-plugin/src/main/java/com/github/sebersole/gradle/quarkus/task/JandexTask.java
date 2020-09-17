@@ -2,33 +2,37 @@ package com.github.sebersole.gradle.quarkus.task;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
-
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
+import org.gradle.api.file.Directory;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.plugins.Convention;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 
-import com.github.sebersole.gradle.quarkus.Indexer;
-import com.github.sebersole.gradle.quarkus.IndexingSupport;
+import org.jboss.jandex.Index;
+
+import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.Logging;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
+import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency;
+import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependencyFactory;
 
+import static com.github.sebersole.gradle.quarkus.Helper.JANDEX_INDEX_FILE_PATH;
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 
 /**
+ * Creates Jandex index for the project modules
+ *
  * @author Steve Ebersole
  */
 public class JandexTask extends DefaultTask {
@@ -54,18 +58,13 @@ public class JandexTask extends DefaultTask {
 	}
 
 	public static final String TASK_NAME = "quarkusJandex";
-	public static final String INDEX_FILE_PATH = "META-INF/jandex.idx";
 
 	private final Project project;
 	private final QuarkusDslImpl quarkusDsl;
 
-	private final File outputDirectory;
-
-	// todo : do these indexes need to be kept per-project?  Or is one big index better?
-
-	// todo : is there a way to know which sub-project sourceSets should be indexed?  Without the user having to configure them.
-	//		-e.g., automatically add all subproject main sourcesets
-	private Set<SourceDirectorySet> sourcesToIndex;
+	// todo : [NOTE] At the moment we only index the projects' main source-set.  This matches
+	//  	the existing behavior, but allowing indexing more than one source-set seems nicer
+	private SourceSet sourceSetToIndex;
 
 	@Inject
 	public JandexTask(Project project, QuarkusDslImpl quarkusDsl) {
@@ -73,21 +72,8 @@ public class JandexTask extends DefaultTask {
 		this.project = project;
 		this.quarkusDsl = quarkusDsl;
 
-		final SourceSet mainSourceSet = resolveMainSourceSet( project );
 		// atm we only support indexing the main source-set
-		this.sourcesToIndex = Collections.singleton( mainSourceSet.getAllJava() );
-
-		final File resourcesOutputDir = new File( new File( project.getBuildDir(), "resources" ), "main" );
-		this.outputDirectory = new File( resourcesOutputDir, INDEX_FILE_PATH );
-
-		doFirst( JandexTask::makeOutputDirectory );
-	}
-
-	private static void makeOutputDirectory(Task task) {
-		assert task instanceof JandexTask;
-
-		//noinspection ResultOfMethodCallIgnored
-		( (JandexTask) task ).outputDirectory.mkdirs();
+		this.sourceSetToIndex = resolveMainSourceSet( project );
 	}
 
 	private static SourceSet resolveMainSourceSet(Project project) {
@@ -109,39 +95,80 @@ public class JandexTask extends DefaultTask {
 		return mainSourceSet;
 	}
 
-	@OutputDirectory
-	public File getOutputDirectory() {
-		return outputDirectory;
-	}
-
 	@InputFiles
-	public Set<SourceDirectorySet> getSourcesToIndex() {
-		return sourcesToIndex;
+	public FileCollection getSourcesToIndex() {
+		return sourceSetToIndex.getAllJava();
 	}
 
-	public void setSourcesToIndex(Set<SourceDirectorySet> sourcesToIndex) {
-		this.sourcesToIndex = sourcesToIndex;
+	public void setSourcesToIndex(SourceSet sourceSetToIndex) {
+		this.sourceSetToIndex = sourceSetToIndex;
+	}
+
+	public void sourcesToIndex(SourceSet sourceSetToIndex) {
+		this.sourceSetToIndex = sourceSetToIndex;
 	}
 
 	@TaskAction
 	public void generateIndex() {
-		quarkusDsl.getQuarkusExtensions().forEach(
-				extension -> sourcesToIndex.forEach( extension::index )
+		Logging.LOGGER.trace( "Starting Jandex indexing for project `{}`", project.getPath() );
+
+		final String projectGroupId = project.getGroup().toString();
+		final String projectArtifactId = project.getName();
+		final String projectVersion = project.getVersion().toString();
+
+		final String projectGav = Helper.groupArtifactVersion(
+				projectGroupId,
+				projectArtifactId,
+				projectVersion
 		);
 
-		getLogger().lifecycle( "########################################################" );
-		getLogger().lifecycle( "Generating Quarkus Jandex index" );
-		getLogger().lifecycle( "########################################################" );
+		quarkusDsl.getBuildState().locateResolvedDependency(
+				projectGav,
+				() -> {
+					final SourceDirectorySet allJavaSources = sourceSetToIndex.getAllJava();
 
-		sourcesToIndex.forEach(
-				sources -> {
-					getLogger().lifecycle( "  > SourceSet ({})", sources.getDisplayName() );
-					sources.getSrcDirs().forEach(
-							srcDir -> getLogger().lifecycle( "    > {}", srcDir.getPath() )
+					final Directory classesDirectoryRef = allJavaSources.getClassesDirectory().getOrNull();
+
+					if ( classesDirectoryRef == null ) {
+						// nothing to index.  really this should never happen outside of testing
+						// because of how TestKit works
+						return new ResolvedDependency(
+								projectGroupId,
+								projectArtifactId,
+								projectVersion,
+								new File(
+										new File(
+												new File(
+														project.getBuildDir(),
+														"classes"
+												),
+												"java"
+										),
+										"main"
+								),
+								null
+						);
+					}
+
+					final File classesDirectory = classesDirectoryRef.getAsFile();
+					assert classesDirectory.isDirectory();
+
+					final Index jandexIndex = ResolvedDependencyFactory.createJandexIndexFromDirectory( classesDirectory, project, quarkusDsl );
+
+					final File resourcesOutputDirectory = sourceSetToIndex.getResources().getDestinationDirectory().get().getAsFile();
+					final File jandexFile = new File( resourcesOutputDirectory, JANDEX_INDEX_FILE_PATH );
+					Helper.ensureFileExists( jandexFile, quarkusDsl );
+
+					ResolvedDependencyFactory.writeIndexToFile( jandexFile, jandexIndex, project, quarkusDsl );
+
+					return new ResolvedDependency(
+							projectGroupId,
+							projectArtifactId,
+							projectVersion,
+							classesDirectory,
+							jandexIndex
 					);
 				}
 		);
-
-		getLogger().lifecycle( "########################################################" );
 	}
 }

@@ -11,7 +11,6 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -110,8 +109,6 @@ public class SimpleTest {
 		final BuildTask taskResult = buildResult.task( ":quarkusJandex" );
 		assertThat( taskResult, notNullValue() );
 		MatcherAssert.assertThat( taskResult.getOutcome(), CoreMatchers.is( TaskOutcome.SUCCESS ) );
-
-		MatcherAssert.assertThat( buildResult.getOutput(), containsString( "src/main/java" ) );
 	}
 
 }

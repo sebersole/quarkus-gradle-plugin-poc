@@ -21,6 +21,7 @@ import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.Logging;
 import com.github.sebersole.gradle.quarkus.QuarkusDsl;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
+import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependencyFactory;
 
 import static com.github.sebersole.gradle.quarkus.Helper.EXTENSION_MARKER_FILE;
 
@@ -88,7 +89,7 @@ public class ExtensionFactory implements NamedDomainObjectFactory<Extension>, Se
 
 					assert extensionArtifactDependency != null;
 
-					quarkusDsl.registerExtensionByGav(
+					quarkusDsl.getBuildState().registerExtensionByGav(
 							Helper.groupArtifactVersion( extensionArtifactDependency ),
 							extension
 					);
@@ -97,6 +98,7 @@ public class ExtensionFactory implements NamedDomainObjectFactory<Extension>, Se
 					resolvedRuntimeDependencies.getResolvedArtifacts().forEach(
 							resolvedArtifact -> {
 								final ModuleVersionIdentifier moduleVersionIdentifier = resolvedArtifact.getModuleVersion().getId();
+								final String gav = Helper.groupArtifactVersion( moduleVersionIdentifier );
 
 								if ( areSame( moduleVersionIdentifier, extensionArtifactDependency ) ) {
 									final Object marker = extractExtensionMarker( resolvedArtifact );
@@ -115,8 +117,7 @@ public class ExtensionFactory implements NamedDomainObjectFactory<Extension>, Se
 								else if ( isExtension( resolvedArtifact ) ) {
 									// Create an extension if there is not already one
 
-									final String gav = Helper.groupArtifactVersion( resolvedArtifact );
-									final Extension extensionByGav = quarkusDsl.findExtensionByGav( gav );
+									final Extension extensionByGav = quarkusDsl.getBuildState().findExtensionByGav( gav );
 
 									//noinspection StatementWithEmptyBody
 									if ( extensionByGav != null ) {
@@ -130,7 +131,7 @@ public class ExtensionFactory implements NamedDomainObjectFactory<Extension>, Se
 												quarkusDsl
 										);
 										quarkusDsl.getQuarkusExtensions().add( transitiveExtension );
-										quarkusDsl.registerExtensionByGav( gav, transitiveExtension );
+										quarkusDsl.getBuildState().registerExtensionByGav( gav, transitiveExtension );
 
 										dependencyHandler.add(
 												transitiveExtension.getRuntimeDependencies().getName(),
@@ -141,20 +142,24 @@ public class ExtensionFactory implements NamedDomainObjectFactory<Extension>, Se
 										transitiveExtension.getRuntimeDependencies().getResolvedConfiguration();
 									}
 								}
+
+								quarkusDsl.getBuildState().locateResolvedDependency(
+										gav,
+										() -> ResolvedDependencyFactory.from( resolvedArtifact, quarkusDsl )
+								);
 							}
 					);
 
 					final Artifact extensionDeploymentArtifact = extension.getDeploymentArtifact();
 					if ( extensionDeploymentArtifact != null && extensionDeploymentArtifact.getDependency() != null ) {
-						// we do not necessarily know whether these exists, so make it's resolution lenient
-						final Dependency dependency = dependencyHandler.add(
+						// we do not necessarily know whether this deployment artifact exists, so make it's resolution lenient
+						dependencyHandler.add(
 								extension.getDeploymentDependencies().getName(),
 								extensionDeploymentArtifact.getDependency()
 						);
-
-						// force the (lenient) resolution of the deployment dependencies
-						extension.getDeploymentDependencies().getResolvedConfiguration().getLenientConfiguration();
 					}
+					// force the (lenient) resolution of the deployment dependencies
+					extension.getDeploymentDependencies().getResolvedConfiguration().getLenientConfiguration();
 				}
 		);
 	}

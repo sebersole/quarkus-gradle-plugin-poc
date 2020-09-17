@@ -50,7 +50,7 @@ public class HibernateOrmExtension extends AbstractExtension implements Serializ
 						throw new QuarkusConfigException( "No database-family was specified for hibernate-orm extension" );
 					}
 
-					final Extension extensionByGav = quarkusDsl.findExtensionByGav( appliedFamily.artifactId );
+					final Extension extensionByGav = quarkusDsl.getBuildState().findExtensionByGav( appliedFamily.artifactId );
 					if ( extensionByGav == null ) {
 						// create and register one
 						final TransitiveExtension transitiveExtension = new TransitiveExtension(
@@ -63,7 +63,7 @@ public class HibernateOrmExtension extends AbstractExtension implements Serializ
 								quarkusDsl
 						);
 						quarkusDsl.getQuarkusExtensions().add( transitiveExtension );
-						quarkusDsl.registerExtensionByGav( appliedFamily.artifactId, transitiveExtension );
+						quarkusDsl.getBuildState().registerExtensionByGav( appliedFamily.artifactId, transitiveExtension );
 
 						project.getDependencies().add(
 								transitiveExtension.getRuntimeDependencies().getName(),

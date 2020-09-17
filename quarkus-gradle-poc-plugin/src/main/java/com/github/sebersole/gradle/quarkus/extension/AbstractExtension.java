@@ -18,7 +18,7 @@ import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.util.ConfigureUtil;
 
 import com.github.sebersole.gradle.quarkus.Helper;
-import com.github.sebersole.gradle.quarkus.Indexer;
+import com.github.sebersole.gradle.quarkus.IndexConsumer;
 import com.github.sebersole.gradle.quarkus.IndexingSupport;
 import com.github.sebersole.gradle.quarkus.Logging;
 import com.github.sebersole.gradle.quarkus.QuarkusDsl;
@@ -210,39 +210,39 @@ public abstract class AbstractExtension implements Extension, Serializable {
 
 	@Override
 	public void index(SourceDirectorySet sources) {
-		final Set<File> deploymentDependencyArtifacts = deploymentDependencies.getResolvedConfiguration()
-				.getLenientConfiguration()
-				.getFiles();
-
-		final List<URL> dependencyArtifactUrls = new ArrayList<>();
-		deploymentDependencyArtifacts.forEach(
-				file -> {
-					try {
-						dependencyArtifactUrls.add( file.toURI().toURL() );
-					}
-					catch (MalformedURLException e) {
-						Logging.LOGGER.info( "Unable to access deployment dependency artifact by URL : " + file.getAbsolutePath() );
-					}
-				}
-		);
-
-		if ( dependencyArtifactUrls.isEmpty() ) {
-			return;
-		}
-
-		try ( final URLClassLoader classLoader = new URLClassLoader( dependencyArtifactUrls.toArray( new URL[0] ), getClass().getClassLoader() ) ) {
-			final ServiceLoader<IndexingSupport> services = ServiceLoader.load( IndexingSupport.class, classLoader );
-			services.forEach(
-					indexingSupport -> {
-						final Indexer indexer = indexingSupport.createIndexer( quarkusDsl );
-						if ( indexer != null ) {
-							indexer.index( sources );
-						}
-					}
-			);
-		}
-		catch ( IOException e ) {
-			Logging.LOGGER.info( "Unable to create ClassLoader from deployment dependency artifacts" );
-		}
+//		final Set<File> deploymentDependencyArtifacts = deploymentDependencies.getResolvedConfiguration()
+//				.getLenientConfiguration()
+//				.getFiles();
+//
+//		final List<URL> dependencyArtifactUrls = new ArrayList<>();
+//		deploymentDependencyArtifacts.forEach(
+//				file -> {
+//					try {
+//						dependencyArtifactUrls.add( file.toURI().toURL() );
+//					}
+//					catch (MalformedURLException e) {
+//						Logging.LOGGER.info( "Unable to access deployment dependency artifact by URL : " + file.getAbsolutePath() );
+//					}
+//				}
+//		);
+//
+//		if ( dependencyArtifactUrls.isEmpty() ) {
+//			return;
+//		}
+//
+//		try ( final URLClassLoader classLoader = new URLClassLoader( dependencyArtifactUrls.toArray( new URL[0] ), getClass().getClassLoader() ) ) {
+//			final ServiceLoader<IndexingSupport> services = ServiceLoader.load( IndexingSupport.class, classLoader );
+//			services.forEach(
+//					indexingSupport -> {
+//						final IndexConsumer indexConsumer = indexingSupport.createIndexer( quarkusDsl );
+//						if ( indexConsumer != null ) {
+//							indexConsumer.index( sources );
+//						}
+//					}
+//			);
+//		}
+//		catch ( IOException e ) {
+//			Logging.LOGGER.info( "Unable to create ClassLoader from deployment dependency artifacts" );
+//		}
 	}
 }

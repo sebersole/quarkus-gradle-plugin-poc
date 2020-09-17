@@ -13,6 +13,8 @@ import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.util.ConfigureUtil;
 
+import org.jboss.jandex.IndexView;
+
 import com.github.sebersole.gradle.quarkus.extension.Extension;
 import com.github.sebersole.gradle.quarkus.extension.ExtensionFactory;
 import groovy.lang.Closure;
@@ -34,13 +36,13 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 	private NativeArguments nativeArgs;
 
 	private final NamedDomainObjectContainer<Extension> extensions;
-	private final Map<String, Extension> extensionsByGav = new HashMap<>();
 
 	private final Configuration quarkusPlatforms;
 
 	private final Configuration runtimeDependencies;
 	private final Configuration deploymentDependencies;
 
+	private final BuildState buildState = new BuildState();
 
 	public QuarkusDslImpl(Project project) {
 		this.project = project;
@@ -207,20 +209,14 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 		return deploymentDependencies;
 	}
 
-	public Extension findExtensionByGav(String gav) {
-		return extensionsByGav.get( gav );
-	}
-
-	public void registerExtensionByGav(String gav, Extension extension) {
-		final Extension existing = extensionsByGav.put( gav, extension );
-		assert existing == null;
+	public BuildState getBuildState() {
+		return buildState;
 	}
 
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// ExtensionCreationShortCuts
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 	@Override
 	public QuarkusDslImpl getQuarkusDsl() {

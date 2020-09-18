@@ -1,22 +1,23 @@
 package com.github.sebersole.gradle.quarkus;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.gradle.api.Action;
-import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer;
+import org.gradle.api.PolymorphicDomainObjectContainer;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.util.ConfigureUtil;
 
-import org.jboss.jandex.IndexView;
-
 import com.github.sebersole.gradle.quarkus.extension.Extension;
-import com.github.sebersole.gradle.quarkus.extension.ExtensionFactory;
+import com.github.sebersole.gradle.quarkus.extension.ExtensionFactorySupport;
+import com.github.sebersole.gradle.quarkus.extension.StandardExtension;
+import com.github.sebersole.gradle.quarkus.extension.orm.HibernateOrmExtension;
+import com.github.sebersole.gradle.quarkus.extension.orm.HibernateOrmExtensionFactory;
 import groovy.lang.Closure;
 
 /**
@@ -24,9 +25,8 @@ import groovy.lang.Closure;
  *
  * @author Steve Ebersole
  */
-public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implements QuarkusDsl, BuildDetails {
+public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implements QuarkusDsl {
 	private final Project project;
-	private final ExtensionFactory extensionFactory;
 
 	private String quarkusVersion = "1.7.1.Final";
 	private File workingDir = new File( "/tmp" );
@@ -35,7 +35,7 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 
 	private NativeArguments nativeArgs;
 
-	private final NamedDomainObjectContainer<Extension> extensions;
+	private final PolymorphicDomainObjectContainer<Extension> extensions;
 
 	private final Configuration quarkusPlatforms;
 
@@ -65,8 +65,32 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 		this.deploymentDependencies.extendsFrom( quarkusPlatforms );
 		this.deploymentDependencies.setDescription( "Collective deployment dependencies for all applied Quarkus extensions" );
 
-		this.extensionFactory = new ExtensionFactory( this, quarkusPlatforms );
-		this.extensions = project.container( Extension.class, extensionFactory );
+		this.extensions = prepareExtensionsContainer( project );
+	}
+
+	public PolymorphicDomainObjectContainer<Extension> prepareExtensionsContainer(Project project) {
+		final ExtensiblePolymorphicDomainObjectContainer<Extension> extensions = project.getObjects().polymorphicDomainObjectContainer( Extension.class );
+
+		final HibernateOrmExtensionFactory hibernateOrmExtensionFactory = new HibernateOrmExtensionFactory( this );
+		extensions.registerFactory( HibernateOrmExtension.class, hibernateOrmExtensionFactory );
+
+		// default factory
+		extensions.registerFactory(
+				Extension.class,
+				name -> {
+					// hackalicious
+					if ( HibernateOrmExtension.CONTAINER_NAME.equals( name )
+							|| HibernateOrmExtension.ARTIFACT_SHORT_NAME.equals( name ) ) {
+						return hibernateOrmExtensionFactory.create( name );
+					}
+
+					final StandardExtension extension = new StandardExtension( name, this );
+					ExtensionFactorySupport.prepareExtension( extension, this );
+					return extension;
+				}
+		);
+
+		return extensions;
 	}
 
 	@Override
@@ -79,12 +103,10 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 		return quarkusVersion;
 	}
 
-	@Override
 	public File getWorkingDirectory() {
 		return getWorkingDir();
 	}
 
-	@Override
 	public Configuration getPlatforms() {
 		return quarkusPlatforms;
 	}
@@ -185,18 +207,27 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 	}
 
 	@Override
-	public NamedDomainObjectContainer<Extension> getQuarkusExtensions() {
-		return extensions;
-	}
-
-	@Override
-	public void extensions(Closure<NamedDomainObjectContainer<Extension>> extensionClosure) {
+	public void extensions(Closure<PolymorphicDomainObjectContainer<Extension>> extensionClosure) {
 		ConfigureUtil.configure( extensionClosure, extensions );
 	}
 
 	@Override
-	public void extensions(Action<NamedDomainObjectContainer<Extension>> action) {
+	public void extensions(Action<PolymorphicDomainObjectContainer<Extension>> action) {
 		action.execute( extensions );
+	}
+
+	@Override
+	public void quarkusExtensions(Closure<PolymorphicDomainObjectContainer<Extension>> extensionClosure) {
+		ConfigureUtil.configure( extensionClosure, extensions );
+	}
+
+	public PolymorphicDomainObjectContainer<Extension> getQuarkusExtensions() {
+		return extensions;
+	}
+
+	@Override
+	public void visitExtensions(Consumer<Extension> consumer) {
+		extensions.forEach( consumer );
 	}
 
 	@Override
@@ -225,6 +256,6 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 
 	@Override
 	public BiConsumer<Extension, QuarkusDsl> getCreatedExtensionPreparer() {
-		return extensionFactory::prepareExtension;
+		return (extension, quarkusDsl) -> ExtensionFactorySupport.prepareExtension( extension, this );
 	}
 }

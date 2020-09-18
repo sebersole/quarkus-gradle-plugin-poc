@@ -31,15 +31,26 @@ quarkus {
     platform "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}"
 
     quarkusExtensions {
+        // Grrr... https://discuss.gradle.org/t/what-is-up-with-this-forum-and-its-silly-title-problem/37648
+        // hibernate( HibernateOrmExtension ) {
         hibernateOrm {
-            derby()
+            databaseFamily = "derby"
+
+            persistenceUnits {
+                abc {
+                    include( 'javax.persistence:javax.persistence-api:2.2' )
+                }
+
+                xyz {
+                    include('log4j:log4j:1.2.17')
+                    include('org.jboss.jbossts:jbossjta:4.16.4.Final')
+                }
+            }
         }
 
         hibernateValidator {
             quarkusArtifact( 'hibernate-validator' )
         }
-
-        quarkusExtension( "jdbcDerby", "jdbc-derby" )
 
         jodaTime {
             artifact 'joda-time:joda-time:2.10.6'

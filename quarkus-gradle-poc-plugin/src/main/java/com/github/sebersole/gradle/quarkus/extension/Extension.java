@@ -4,12 +4,11 @@ import org.gradle.api.Action;
 import org.gradle.api.Named;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.file.SourceDirectorySet;
 
 import groovy.lang.Closure;
 
 /**
- * Basic contract for an "extension config" object
+ * Basic config contract for a Quarkus extension
  */
 public interface Extension extends Named {
 	/**
@@ -31,12 +30,19 @@ public interface Extension extends Named {
 	void artifact(Object notation, Closure<Artifact> artifactClosure);
 	void artifact(Object notation, Action<Artifact> artifactAction);
 
+	/**
+	 * The artifact that contains the extension's deployment stuff
+	 */
 	Artifact getDeploymentArtifact();
 	void deploymentArtifact(Action<Artifact> action);
 	Artifact deploymentArtifact(Object notation);
 	void deploymentArtifact(Object notation, Closure<Artifact> artifactClosure);
 	void deploymentArtifact(Object notation, Action<Artifact> artifactAction);
 
+	/**
+	 * Defines {@link #getArtifact()} and {@link #getDeploymentArtifact()} using
+	 * Quarkus naming rules
+	 */
 	Artifact quarkusArtifact(String artifactId);
 	void quarkusArtifact(String artifactId, Closure<Artifact> artifactClosure);
 	void quarkusArtifact(String artifactId, Action<Artifact> artifactAction);
@@ -52,5 +58,4 @@ public interface Extension extends Named {
 	void deploymentDependency(Object notation, Closure<Dependency> closure);
 	void deploymentDependency(Object notation, Action<Dependency> action);
 
-	void index(SourceDirectorySet sources);
 }

@@ -2,6 +2,7 @@ package com.github.sebersole.gradle.quarkus.extension;
 
 import org.gradle.api.Action;
 
+import com.github.sebersole.gradle.quarkus.extension.orm.HibernateOrmExtension;
 import groovy.lang.Closure;
 
 /**

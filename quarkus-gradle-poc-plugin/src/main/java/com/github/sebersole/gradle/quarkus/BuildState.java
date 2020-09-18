@@ -17,13 +17,28 @@ public class BuildState {
 	private final Map<String, ResolvedDependency> resolvedDependencyByGav = new HashMap<>();
 	private final MutableCompositeIndex compositeIndex = new MutableCompositeIndex();
 
+	public MutableCompositeIndex getCompositeJandexIndex() {
+		return compositeIndex;
+	}
+
+	public Extension locateExtensionByGav(String gav, Supplier<Extension> creator) {
+		final Extension extensionByGav = findExtensionByGav( gav );
+		if ( extensionByGav != null ) {
+			return extensionByGav;
+		}
+
+		final Extension created = creator.get();
+		registerExtensionByGav( gav, created );
+		return created;
+	}
+
 	public Extension findExtensionByGav(String gav) {
 		return extensionsByGav.get( gav );
 	}
 
 	public void registerExtensionByGav(String gav, Extension extension) {
 		final Extension existing = extensionsByGav.put( gav, extension );
-		assert existing == null;
+		assert existing == null : "Extension already registered under GAV : " + gav;
 	}
 
 	public ResolvedDependency locateResolvedDependency(String gav, Supplier<ResolvedDependency> creator) {

@@ -7,7 +7,7 @@ import org.gradle.util.ConfigureUtil;
 
 import com.github.sebersole.gradle.quarkus.extension.Extension;
 import com.github.sebersole.gradle.quarkus.extension.ExtensionCreationShortCuts;
-import com.github.sebersole.gradle.quarkus.extension.HibernateOrmExtension;
+import com.github.sebersole.gradle.quarkus.extension.orm.HibernateOrmExtension;
 import groovy.lang.Closure;
 
 /**

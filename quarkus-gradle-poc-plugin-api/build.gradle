@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+//    id 'maven-publish'
+//    id 'org.hibernate.build.maven-repo-auth' version '3.0.4'
 }
 
 apply from: rootProject.file( 'gradle/base-information.gradle' )
@@ -11,7 +13,7 @@ repositories {
 dependencies {
     implementation gradleApi()
 
-    implementation 'org.jboss:jandex:pick'
+    implementation 'org.jboss:jandex'
     implementation enforcedPlatform( "io.quarkus:quarkus-bom:${project.quarkusVersion}" )
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.quarkusVersion}"
@@ -19,3 +21,18 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.quarkusVersion}"
 }
+
+//publishing {
+//    publications {
+//        publishedArtifacts( MavenPublication ) {
+//            from components.java
+//        }
+//    }
+//
+//    repositories {
+//        maven {
+//            name 'jboss-snapshots-repository'
+//            url 'https://repository.jboss.org/nexus/content/repositories/snapshots'
+//        }
+//    }
+//}

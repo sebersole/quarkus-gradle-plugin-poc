@@ -2,9 +2,10 @@ package com.github.sebersole.gradle.quarkus;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.function.Consumer;
 
 import org.gradle.api.Action;
-import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.PolymorphicDomainObjectContainer;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
@@ -22,7 +23,6 @@ public interface QuarkusDsl extends ExtensionCreationShortCuts, Serializable {
 	String getQuarkusVersion();
 
 	void setQuarkusVersion(String quarkusVersion);
-	NamedDomainObjectContainer<Extension> getQuarkusExtensions();
 
 	void quarkusVersion(String quarkusVersion);
 
@@ -50,8 +50,12 @@ public interface QuarkusDsl extends ExtensionCreationShortCuts, Serializable {
 
 	void platform(String gav, Action<Dependency> action);
 
-	void extensions(Closure<NamedDomainObjectContainer<Extension>> extensionClosure);
-	void extensions(Action<NamedDomainObjectContainer<Extension>> action);
+	void extensions(Closure<PolymorphicDomainObjectContainer<Extension>> extensionClosure);
+	void extensions(Action<PolymorphicDomainObjectContainer<Extension>> action);
+
+	void quarkusExtensions(Closure<PolymorphicDomainObjectContainer<Extension>> extensionClosure);
+
+	void visitExtensions(Consumer<Extension> consumer);
 
 	Configuration getRuntimeDependencies();
 	Configuration getDeploymentDependencies();

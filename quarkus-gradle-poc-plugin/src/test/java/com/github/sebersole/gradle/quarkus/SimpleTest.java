@@ -111,4 +111,19 @@ public class SimpleTest {
 		MatcherAssert.assertThat( taskResult.getOutcome(), CoreMatchers.is( TaskOutcome.SUCCESS ) );
 	}
 
+	@Test
+	public void testShowPersistenceUnitsTask() {
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
+				.withArguments( "clean", "showPersistenceUnits", "--stacktrace" );
+
+		final BuildResult buildResult = gradleRunner.build();
+
+		final BuildTask taskResult = buildResult.task( ":showPersistenceUnits" );
+		assertThat( taskResult, notNullValue() );
+		assertThat( taskResult.getOutcome(), CoreMatchers.is( TaskOutcome.SUCCESS ) );
+
+		assertThat( buildResult.getOutput(), containsString( "> Persistence Unit : abc" ) );
+		assertThat( buildResult.getOutput(), containsString( "> Persistence Unit : xyz" ) );
+	}
+
 }

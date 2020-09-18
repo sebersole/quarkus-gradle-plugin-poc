@@ -4,10 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 
-import org.gradle.api.GradleException;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.artifacts.ResolvedArtifact;
+
+import org.jboss.jandex.DotName;
 
 /**
  * @author Steve Ebersole
@@ -23,19 +24,25 @@ public class Helper {
 	public static final String QUARKUS_BOM = "quarkus-bom";
 	public static final String QUARKUS_UNIVERSE_COMMUNITY_BOM = "quarkus-universe-bom";
 
-	public static final String EXTENSION_MARKER_FILE = "META-INF/quarkus-extension.properties";
-
 	public static final String META_INF = "META-INF/";
+
+	public static final String EXTENSION_YAML_FILE = META_INF + "quarkus-extension.yaml";
+	public static final String EXTENSION_PROP_FILE = META_INF + "quarkus-extension.properties";
+
 	public static final String JANDEX_FILE_NAME = "jandex.idx";
 	public static final String JANDEX_INDEX_FILE_PATH = META_INF + JANDEX_FILE_NAME;
 
-	public static <T> T instantiate(Class<T> type) {
-		try {
-			return type.getDeclaredConstructor().newInstance();
+	public static DotName createJandexName(String... parts) {
+		assert parts != null;
+		assert parts.length > 0;
+
+		DotName result = DotName.createComponentized( null, parts[0] );
+
+		for ( int i = 1; i < parts.length; i++ ) {
+			result = DotName.createComponentized( result, parts[i] );
 		}
-		catch ( Exception e ) {
-			throw new GradleException( "Unable to instantiate specified Extension type : " + type.getName() );
-		}
+
+		return result;
 	}
 
 	public static String groupArtifact(String group, String artifact) {

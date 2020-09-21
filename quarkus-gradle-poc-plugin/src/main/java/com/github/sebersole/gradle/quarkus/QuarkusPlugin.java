@@ -3,6 +3,7 @@ package com.github.sebersole.gradle.quarkus;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.util.GradleVersion;
 
 import com.github.sebersole.gradle.quarkus.task.AugmentationTask;
@@ -28,11 +29,12 @@ public class QuarkusPlugin implements Plugin<Project> {
 				project
 		);
 
-		final JandexTask[] jandexTasks = JandexTask.apply( dsl );
+		final Task jandexTask = project.task( JandexTask.TASK_NAME );
+		jandexTask.setGroup( QUARKUS );
+		jandexTask.setDescription( "Grouping task for the individual Jandex indexing tasks" );
 
 		final AugmentationTask augmentationTask = AugmentationTask.task( dsl );
-		//noinspection RedundantCast
-		augmentationTask.dependsOn( (Object[]) jandexTasks );
+		augmentationTask.dependsOn( jandexTask );
 
 		final GenerateJarTask jarTask = GenerateJarTask.task( dsl );
 		jarTask.dependsOn( augmentationTask );

@@ -14,19 +14,22 @@ import groovy.lang.Closure;
  */
 public class PersistenceUnitConfig implements Named {
 	private final String unitName;
+	private final HibernateOrmExtension ormExtension;
 	private final QuarkusDsl quarkusDsl;
 
 	private final String configName;
 
 	private final Configuration dependencies;
 
-	public PersistenceUnitConfig(String unitName, QuarkusDsl quarkusDsl) {
+	public PersistenceUnitConfig(String unitName, HibernateOrmExtension ormExtension, QuarkusDsl quarkusDsl) {
 		this.unitName = unitName;
+		this.ormExtension = ormExtension;
 		this.quarkusDsl = quarkusDsl;
 
 		this.configName = determineConfigurationName( unitName );
 
 		this.dependencies = quarkusDsl.getProject().getConfigurations().maybeCreate( configName );
+		ormExtension.getRuntimeDependencies().extendsFrom( dependencies );
 	}
 
 	public static String determineConfigurationName(String unitName) {

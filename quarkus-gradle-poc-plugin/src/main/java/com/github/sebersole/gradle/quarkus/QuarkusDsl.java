@@ -9,6 +9,8 @@ import org.gradle.api.PolymorphicDomainObjectContainer;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.file.Directory;
+import org.gradle.api.file.DirectoryProperty;
 
 import com.github.sebersole.gradle.quarkus.extension.Extension;
 import com.github.sebersole.gradle.quarkus.extension.ExtensionCreationShortCuts;
@@ -26,11 +28,7 @@ public interface QuarkusDsl extends ExtensionCreationShortCuts, Serializable {
 
 	void quarkusVersion(String quarkusVersion);
 
-	File getWorkingDir();
-
-	void setWorkingDir(Object workingDir);
-
-	void workingDir(Object workingDir);
+	Directory getWorkingDir();
 
 	String getTestProfile();
 

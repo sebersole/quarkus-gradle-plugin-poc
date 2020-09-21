@@ -1,6 +1,5 @@
 package com.github.sebersole.gradle.quarkus;
 
-import java.io.File;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -11,6 +10,7 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
+import org.gradle.api.file.Directory;
 import org.gradle.util.ConfigureUtil;
 
 import com.github.sebersole.gradle.quarkus.extension.Extension;
@@ -19,6 +19,8 @@ import com.github.sebersole.gradle.quarkus.extension.StandardExtension;
 import com.github.sebersole.gradle.quarkus.extension.orm.HibernateOrmExtension;
 import com.github.sebersole.gradle.quarkus.extension.orm.HibernateOrmExtensionFactory;
 import groovy.lang.Closure;
+
+import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 
 /**
  * Gradle DSL extension for configuring the plugin
@@ -29,7 +31,7 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 	private final Project project;
 
 	private String quarkusVersion = "1.7.1.Final";
-	private File workingDir = new File( "/tmp" );
+	private final Directory workingDir;
 
 	private String testProfile = "prod";
 
@@ -47,6 +49,8 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 	public QuarkusDslImpl(Project project) {
 		this.project = project;
 
+		this.workingDir = project.getLayout().getBuildDirectory().get().dir( QUARKUS );
+
 		quarkusPlatforms = project.getConfigurations().maybeCreate( "quarkusPlatforms" );
 		quarkusPlatforms.setDescription( "Configuration to specify all Quarkus platforms (BOMs) to be applied" );
 
@@ -60,6 +64,10 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 		this.runtimeDependencies = project.getConfigurations().create( "quarkusRuntime" );
 		this.runtimeDependencies.extendsFrom( quarkusPlatforms );
 		this.runtimeDependencies.setDescription( "Collective runtime dependencies for all applied Quarkus extensions" );
+
+		final Configuration implementationDependencies = project.getConfigurations().getByName( "implementation" );
+		implementationDependencies.extendsFrom( runtimeDependencies );
+		implementationDependencies.extendsFrom( quarkusPlatforms );
 
 		this.deploymentDependencies = project.getConfigurations().create( "quarkusDeployment" );
 		this.deploymentDependencies.extendsFrom( quarkusPlatforms );
@@ -103,10 +111,6 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 		return quarkusVersion;
 	}
 
-	public File getWorkingDirectory() {
-		return getWorkingDir();
-	}
-
 	public Configuration getPlatforms() {
 		return quarkusPlatforms;
 	}
@@ -122,18 +126,8 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 	}
 
 	@Override
-	public File getWorkingDir() {
+	public Directory getWorkingDir() {
 		return workingDir;
-	}
-
-	@Override
-	public void setWorkingDir(Object workingDir) {
-		this.workingDir = project.file( workingDir );
-	}
-
-	@Override
-	public void workingDir(Object workingDir) {
-		setWorkingDir( workingDir );
 	}
 
 	@Override
@@ -157,14 +151,6 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 			nativeArgs = new NativeArguments();
 		}
 		return nativeArgs;
-	}
-
-	public void setNativeArgs(NativeArguments nativeArgs) {
-		this.nativeArgs = nativeArgs;
-	}
-
-	public void nativeArgs(NativeArguments nativeArgs) {
-		setNativeArgs( nativeArgs );
 	}
 
 	@Override
@@ -203,6 +189,9 @@ public class QuarkusDslImpl extends AbstractExtensionCreationShortCuts implement
 				quarkusPlatforms.getName(),
 				dependencyHandler.enforcedPlatform( gav )
 		);
+
+		assert dependency != null;
+
 		action.execute( dependency );
 	}
 

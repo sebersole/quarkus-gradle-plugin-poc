@@ -55,7 +55,7 @@ public class HibernateOrmExtension extends AbstractExtension implements Serializ
 
 		this.persistenceUnits = project.container(
 				PersistenceUnitConfig.class,
-				name -> new PersistenceUnitConfig( name, quarkusDsl )
+				name -> new PersistenceUnitConfig( name, this, quarkusDsl )
 		);
 
 		ShowPersistenceUnitsTask.from( this, quarkusDsl );

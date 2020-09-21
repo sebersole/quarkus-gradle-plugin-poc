@@ -5,6 +5,8 @@ import java.util.Set;
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.tasks.TaskAction;
 
 import org.jboss.jandex.ClassInfo;
@@ -32,6 +34,24 @@ public class ShowPersistenceUnitsTask extends DefaultTask {
 		);
 		task.setGroup( QUARKUS );
 		task.setDescription( "Displays information about JPA persistence-units recognized by Quarkus" );
+
+		final Task augmentationTask = quarkusDsl.getProject().getTasks().getByName( AugmentationTask.TASK_NAME );
+		task.dependsOn( augmentationTask );
+
+		final Configuration implementationDependencies = quarkusDsl.getProject().getConfigurations().getByName( "implementation" );
+		// a strange bit of Gradle showing through.  we cannot resolve `implementation` ourselves.  Instead we need
+		// to create a new Configuration that "extends" `implementation` and resolve that.
+		//
+		// org.gradle.api.internal.tasks.TaskDependencyResolveException: Could not determine the dependencies of task ':showPersistenceUnits'.
+		//	at org.gradle.api.internal.tasks.CachingTaskDependencyResolveContext.getDependencies(CachingTaskDependencyResolveContext.java:68)
+		//	at org.gradle.execution.plan.TaskDependencyResolver.resolveDependenciesFor(TaskDependencyResolver.java:46)
+		//	at org.gradle.execution.plan.LocalTaskNode.getDependencies(LocalTaskNode.java:161)ExecutorPolicy.java:64)
+		//	...
+		//Caused by: java.lang.IllegalStateException: Resolving dependency configuration 'implementation' is not allowed as it is defined as 'canBeResolved=false'.
+		//Instead, a resolvable ('canBeResolved=true') dependency configuration that extends 'implementation' should be resolved.
+		final Configuration resolvable = quarkusDsl.getProject().getConfigurations().detachedConfiguration();
+		resolvable.extendsFrom( implementationDependencies );
+		task.dependsOn( resolvable );
 
 		return task;
 	}

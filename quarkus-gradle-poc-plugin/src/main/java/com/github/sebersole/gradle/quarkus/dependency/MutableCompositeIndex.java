@@ -28,6 +28,10 @@ public class MutableCompositeIndex implements IndexView {
 		}
 	}
 
+	public void expand(ResolvedDependency dependency) {
+		expand( dependency.getJandexIndexAccess().get() );
+	}
+
 	@Override
 	public Collection<ClassInfo> getKnownClasses() {
 		if ( delegate == null ) {

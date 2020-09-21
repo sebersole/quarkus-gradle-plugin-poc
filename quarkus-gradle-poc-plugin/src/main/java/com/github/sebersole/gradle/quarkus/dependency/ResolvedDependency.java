@@ -1,41 +1,36 @@
 package com.github.sebersole.gradle.quarkus.dependency;
 
-import java.io.File;
 import java.util.Objects;
 
-import org.jboss.jandex.IndexView;
+import org.gradle.api.provider.Provider;
 
-import com.github.sebersole.gradle.quarkus.Helper;
+import org.jboss.jandex.IndexView;
 
 /**
  * Details related to a resolved dependency
  */
 public class ResolvedDependency {
-
-	// todo : make reading/creating and writing of the Jandex index delayed
-	//		- `Supplier<IndexView>` e.g.
-
 	private final String gav;
 
 	private final String group;
 	private final String artifact;
 	private final String version;
-	private final File artifactBase;
-	private final IndexView jandexIndex;
+
+	private final Provider<IndexView> indexAccess;
 
 	public ResolvedDependency(
+			String gav,
 			String group,
 			String artifact,
 			String version,
-			File artifactBase,
-			IndexView jandexIndex) {
-		this.gav = Helper.groupArtifactVersion( group, artifact, version );
+			Provider<IndexView> indexAccess) {
+		this.gav = gav;
 
 		this.group = group;
 		this.artifact = artifact;
 		this.version = version;
-		this.artifactBase = artifactBase;
-		this.jandexIndex = jandexIndex;
+
+		this.indexAccess = indexAccess;
 	}
 
 	public String getGav() {
@@ -64,17 +59,10 @@ public class ResolvedDependency {
 	}
 
 	/**
-	 * @apiNote This could be an archive or a directory (for project dependencies)
+	 * Access to the Jandex index
 	 */
-	public File getArtifactBase() {
-		return artifactBase;
-	}
-
-	/**
-	 * The Jandex index derived from the artifact
-	 */
-	public IndexView getJandexIndex() {
-		return jandexIndex;
+	public Provider<IndexView> getJandexIndexAccess() {
+		return indexAccess;
 	}
 
 	@Override

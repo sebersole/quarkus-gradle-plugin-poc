@@ -1,174 +1,121 @@
 package com.github.sebersole.gradle.quarkus.task;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
-import org.gradle.api.file.Directory;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.api.plugins.Convention;
-import org.gradle.api.plugins.JavaPlugin;
-import org.gradle.api.plugins.JavaPluginConvention;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.Task;
+import org.gradle.api.artifacts.ResolvedArtifact;
+import org.gradle.api.file.RegularFile;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
 import org.jboss.jandex.Index;
 
-import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.Logging;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
-import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency;
-import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependencyFactory;
+import com.github.sebersole.gradle.quarkus.indexing.IndexAccess;
+import com.github.sebersole.gradle.quarkus.indexing.JandexHelper;
 
-import static com.github.sebersole.gradle.quarkus.Helper.JANDEX_INDEX_FILE_PATH;
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 
 /**
- * Creates Jandex index for the project modules
- *
- * @author Steve Ebersole
+ * Responsible for managing the Jandex Index for a single dependency
  */
 public class JandexTask extends DefaultTask {
-
-	public static JandexTask[] apply(QuarkusDslImpl dsl) {
-		final List<JandexTask> tasks = new ArrayList<>();
-		apply( dsl.getProject(), dsl, tasks::add );
-		return tasks.toArray( new JandexTask[0] );
-	}
-
-	private static void apply(Project project, QuarkusDslImpl dsl, Consumer<JandexTask> taskConsumer) {
-		if ( project.getPlugins().hasPlugin( JavaPlugin.class ) ) {
-			final JandexTask jandexTask = project
-					.getTasks()
-					.create( TASK_NAME, JandexTask.class, project, dsl );
-			jandexTask.setGroup( QUARKUS );
-			jandexTask.setDescription( "Generates a Jandex index in preparation for augmentation" );
-
-			taskConsumer.accept( jandexTask );
-		}
-
-		project.subprojects( subProject -> apply( subProject, dsl, taskConsumer ) );
-	}
-
 	public static final String TASK_NAME = "quarkusJandex";
 
-	private final Project project;
+	public static IndexAccess apply(String gav, ResolvedArtifact resolvedArtifact, QuarkusDslImpl quarkusDsl) {
+		final Project project = quarkusDsl.getProject();
+
+		final String uniqueName = JandexHelper.makeUniqueName( resolvedArtifact );
+		final String jandexTaskName = TASK_NAME + "_" + uniqueName;
+		final String indexFileName = uniqueName + ".idx";
+
+		final RegularFile indexFile = quarkusDsl.getWorkingDir().dir( "jandex" ).file( indexFileName );
+
+		final JandexTask jandexTask = project.getTasks().create(
+				jandexTaskName,
+				JandexTask.class,
+				gav,
+				resolvedArtifact.getFile(),
+				indexFile,
+				quarkusDsl
+		);
+		jandexTask.setGroup( QUARKUS );
+		jandexTask.setDescription( "Manages Jandex index related with `" + gav + "`" );
+
+		final Task groupingTask = project.getTasks().getByName( TASK_NAME );
+		groupingTask.dependsOn( jandexTask );
+
+		return new IndexAccess( gav, jandexTask::accessJandexIndex, quarkusDsl );
+	}
+
+	private final String gav;
+	private final File dependencyArtifactBase;
+	private final RegularFile indexFile;
+
 	private final QuarkusDslImpl quarkusDsl;
 
-	// todo : [NOTE] At the moment we only index the projects' main source-set.  This matches
-	//  	the existing behavior, but allowing indexing more than one source-set seems nicer
-	private SourceSet sourceSetToIndex;
+	private Index index;
+	private boolean resolved;
+
 
 	@Inject
-	public JandexTask(Project project, QuarkusDslImpl quarkusDsl) {
-		assert project != null : "Project was null";
-		this.project = project;
+	public JandexTask(String gav, File dependencyArtifactBase, RegularFile indexFile, QuarkusDslImpl quarkusDsl) {
+		this.gav = gav;
+		this.dependencyArtifactBase = dependencyArtifactBase;
+		this.indexFile = indexFile;
+
 		this.quarkusDsl = quarkusDsl;
 
-		// atm we only support indexing the main source-set
-		this.sourceSetToIndex = resolveMainSourceSet( project );
+		setGroup( QUARKUS );
+		setDescription( "Manages Jandex index related with `" + gav + "`" );
 	}
 
-	private static SourceSet resolveMainSourceSet(Project project) {
-		final Convention convention = project.getConvention();
-
-		final JavaPluginConvention javaPluginConvention = convention.findPlugin( JavaPluginConvention.class );
-		if ( javaPluginConvention == null ) {
-			Logging.LOGGER.debug( "Skipping project `{}`; it defined no JavaPluginConvention", project.getPath() );
-			return null;
-		}
-
-		final SourceSet mainSourceSet = javaPluginConvention.getSourceSets().findByName( "main" );
-		if ( mainSourceSet == null ) {
-			Logging.LOGGER.debug( "Skipping project `{}`; it defined no `main` SourceSet", project.getPath() );
-			return null;
-		}
-
-		Logging.LOGGER.debug( "Adding main SourceSet ({})", project.getPath() );
-		return mainSourceSet;
+	@Input
+	public String getGav() {
+		return gav;
 	}
 
-	@InputFiles
-	public FileCollection getSourcesToIndex() {
-		return sourceSetToIndex.getAllJava();
+	@InputFile
+	public File getDependencyArtifactBase() {
+		return dependencyArtifactBase;
 	}
 
-	public void setSourcesToIndex(SourceSet sourceSetToIndex) {
-		this.sourceSetToIndex = sourceSetToIndex;
-	}
-
-	public void sourcesToIndex(SourceSet sourceSetToIndex) {
-		this.sourceSetToIndex = sourceSetToIndex;
+	@OutputFile
+	public RegularFile getIndexFile() {
+		return indexFile;
 	}
 
 	@TaskAction
-	public void generateIndex() {
-		Logging.LOGGER.trace( "Starting Jandex indexing for project `{}`", project.getPath() );
+	public void resolveIndex() {
+		this.index = JandexHelper.resolveJandexIndex( gav, dependencyArtifactBase, indexFile, quarkusDsl );
+		this.resolved = true;
+	}
 
-		final String projectGroupId = project.getGroup().toString();
-		final String projectArtifactId = project.getName();
-		final String projectVersion = project.getVersion().toString();
+	public Index accessJandexIndex() {
+		if ( resolved ) {
+			return index;
+		}
 
-		final String projectGav = Helper.groupArtifactVersion(
-				projectGroupId,
-				projectArtifactId,
-				projectVersion
-		);
+		Logging.LOGGER.debug( "Resolving Jandex index for dependency `{}`", gav );
 
-		quarkusDsl.getBuildState().locateResolvedDependency(
-				projectGav,
-				() -> {
-					final SourceDirectorySet allJavaSources = sourceSetToIndex.getAllJava();
+		final boolean beingExecuted = getProject().getGradle().getTaskGraph().hasTask( this );
+		if ( beingExecuted ) {
+			resolveIndex();
+			return index;
+		}
 
-					final Directory classesDirectoryRef = allJavaSources.getClassesDirectory().getOrNull();
+		// otherwise, just load the index file we've created previously...
+		assert indexFile.getAsFile().exists();
+		this.index = JandexHelper.readJandexIndex( indexFile.getAsFile() );
+		this.resolved = true;
 
-					if ( classesDirectoryRef == null ) {
-						// nothing to index.  really this should never happen outside of testing
-						// because of how TestKit works
-						return new ResolvedDependency(
-								projectGroupId,
-								projectArtifactId,
-								projectVersion,
-								new File(
-										new File(
-												new File(
-														project.getBuildDir(),
-														"classes"
-												),
-												"java"
-										),
-										"main"
-								),
-								null
-						);
-					}
-
-					final File classesDirectory = classesDirectoryRef.getAsFile();
-					assert classesDirectory.isDirectory();
-
-					final Index jandexIndex = ResolvedDependencyFactory.createJandexIndexFromDirectory( classesDirectory, project, quarkusDsl );
-
-					final File resourcesOutputDirectory = sourceSetToIndex.getResources().getDestinationDirectory().get().getAsFile();
-					final File jandexFile = new File( resourcesOutputDirectory, JANDEX_INDEX_FILE_PATH );
-					Helper.ensureFileExists( jandexFile, quarkusDsl );
-
-					ResolvedDependencyFactory.writeIndexToFile( jandexFile, jandexIndex, project, quarkusDsl );
-
-					return new ResolvedDependency(
-							projectGroupId,
-							projectArtifactId,
-							projectVersion,
-							classesDirectory,
-							jandexIndex
-					);
-				}
-		);
+		return index;
 	}
 }

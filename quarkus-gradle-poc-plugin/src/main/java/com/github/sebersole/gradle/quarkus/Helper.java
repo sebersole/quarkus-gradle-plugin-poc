@@ -18,7 +18,6 @@ public class Helper {
 
 	public static final String REPORT_BANNER_LINE = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 	public static final String REPORT_INDENTATION = "  ";
-	public static final String REPORT_INDENTATION_MARKER = ">";
 
 	public static final String QUARKUS_GROUP = "io.quarkus";
 	public static final String QUARKUS_BOM = "quarkus-bom";
@@ -31,19 +30,6 @@ public class Helper {
 
 	public static final String JANDEX_FILE_NAME = "jandex.idx";
 	public static final String JANDEX_INDEX_FILE_PATH = META_INF + JANDEX_FILE_NAME;
-
-	public static DotName createJandexName(String... parts) {
-		assert parts != null;
-		assert parts.length > 0;
-
-		DotName result = DotName.createComponentized( null, parts[0] );
-
-		for ( int i = 1; i < parts.length; i++ ) {
-			result = DotName.createComponentized( result, parts[i] );
-		}
-
-		return result;
-	}
 
 	public static String groupArtifact(String group, String artifact) {
 		return String.format(
@@ -80,7 +66,7 @@ public class Helper {
 	public static void ensureFileExists(File file, QuarkusDsl quarkusDsl) {
 		try {
 			//noinspection ResultOfMethodCallIgnored
-			file.mkdirs();
+			file.getParentFile().mkdirs();
 			final boolean created = file.createNewFile();
 			if ( created ) {
 				return;
@@ -92,6 +78,27 @@ public class Helper {
 		}
 
 		Logging.LOGGER.debug( "Unable to ensure File existence {}", file.getAbsolutePath() );
+	}
+
+	public static String sanitize(String string) {
+		final String[] splits = string.split( "//." );
+
+		String separator = null;
+		final StringBuilder buffer = new StringBuilder();
+
+		//noinspection ForLoopReplaceableByForEach
+		for ( int i = 0; i < splits.length; i++ ) {
+			if ( separator != null ) {
+				buffer.append( separator );
+			}
+			else {
+				separator = "_";
+			}
+
+			buffer.append( splits[i] );
+		}
+
+		return buffer.toString();
 	}
 
 	private Helper() {

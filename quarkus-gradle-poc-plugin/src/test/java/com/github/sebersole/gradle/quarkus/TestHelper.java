@@ -30,7 +30,18 @@ public class TestHelper {
 		return new File( testProjectsBaseDirectory(), projectPath );
 	}
 
+	public static File jandexOutputDir(GradleRunner gradleRunner) {
+		return jandexOutputDir( gradleRunner.getProjectDir() );
+	}
+
+	public static File jandexOutputDir(File projectDirectory) {
+		final File gradleBuildDir = new File( projectDirectory, "build" );
+		final File quarkusOutputDir = new File( gradleBuildDir, "quarkus" );
+		return new File( quarkusOutputDir, "jandex" );
+	}
+
 	public static GradleRunner createGradleRunner(String projectPath) {
+
 		final File projectsBaseDirectory = testProjectsBaseDirectory();
 		final File projectDirectory = new File( projectsBaseDirectory, projectPath );
 

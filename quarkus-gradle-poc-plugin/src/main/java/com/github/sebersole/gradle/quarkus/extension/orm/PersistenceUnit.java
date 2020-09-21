@@ -6,6 +6,7 @@ import java.util.Set;
 
 import org.jboss.jandex.ClassInfo;
 
+import com.github.sebersole.gradle.quarkus.QuarkusDsl;
 import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
 import com.github.sebersole.gradle.quarkus.dependency.MutableCompositeIndex;
 
@@ -14,13 +15,13 @@ import com.github.sebersole.gradle.quarkus.dependency.MutableCompositeIndex;
  */
 public class PersistenceUnit {
 	private final String unitName;
-	private final MutableCompositeIndex compositeJandexIndex;
+	private final QuarkusDsl quarkusDsl;
 
 	private Set<ClassInfo> classesToInclude;
 
 	public PersistenceUnit(String unitName, QuarkusDslImpl quarkusDsl) {
 		this.unitName = unitName;
-		this.compositeJandexIndex = quarkusDsl.getBuildState().getCompositeJandexIndex();
+		this.quarkusDsl = quarkusDsl;
 	}
 
 	public String getUnitName() {

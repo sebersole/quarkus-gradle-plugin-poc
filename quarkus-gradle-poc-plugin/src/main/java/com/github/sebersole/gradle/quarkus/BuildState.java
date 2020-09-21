@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.jboss.jandex.IndexView;
+
 import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency;
 import com.github.sebersole.gradle.quarkus.extension.Extension;
 import com.github.sebersole.gradle.quarkus.dependency.MutableCompositeIndex;
@@ -15,10 +17,20 @@ import com.github.sebersole.gradle.quarkus.dependency.MutableCompositeIndex;
 public class BuildState {
 	private final Map<String, Extension> extensionsByGav = new HashMap<>();
 	private final Map<String, ResolvedDependency> resolvedDependencyByGav = new HashMap<>();
-	private final MutableCompositeIndex compositeIndex = new MutableCompositeIndex();
 
-	public MutableCompositeIndex getCompositeJandexIndex() {
+	private MutableCompositeIndex compositeIndex;
+
+	public MutableCompositeIndex getResolvedCompositeIndex() {
+		if ( compositeIndex == null ) {
+			compositeIndex = new MutableCompositeIndex();
+			visitResolvedDependencies( compositeIndex::expand );
+		}
+
 		return compositeIndex;
+	}
+
+	public void withCompositeJandexIndex(Consumer<IndexView> indexConsumer) {
+		indexConsumer.accept( getResolvedCompositeIndex() );
 	}
 
 	public Extension locateExtensionByGav(String gav, Supplier<Extension> creator) {
@@ -60,7 +72,6 @@ public class BuildState {
 	public void registerResolvedDependency(String gav, ResolvedDependency resolvedDependency) {
 		final ResolvedDependency previous = resolvedDependencyByGav.put( gav, resolvedDependency );
 		assert previous == null;
-		compositeIndex.expand( resolvedDependency.getJandexIndex() );
 	}
 
 	public void visitResolvedDependencies(Consumer<ResolvedDependency> consumer) {

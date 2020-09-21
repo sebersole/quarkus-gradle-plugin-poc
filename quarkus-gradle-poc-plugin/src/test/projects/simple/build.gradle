@@ -32,7 +32,7 @@ quarkus {
 
     quarkusExtensions {
         // Grrr... https://discuss.gradle.org/t/what-is-up-with-this-forum-and-its-silly-title-problem/37648
-        // hibernate( HibernateOrmExtension ) {
+        //hibernate( HibernateOrmExtension ) {
         hibernateOrm {
             databaseFamily = "derby"
 

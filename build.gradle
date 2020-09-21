@@ -5,6 +5,6 @@ apply from: rootProject.file( 'gradle/base-information.gradle' )
 // Configure wrapper to download the full Gradle distribution
 wrapper {
     // To upgrade the version of gradle used in the wrapper, run:
-    //     ./gradlew wrapper --gradle-version NEW_VERSION
+    //     ../gradlew wrapper --gradle-version NEW_VERSION
     distributionType = Wrapper.DistributionType.ALL
 }

@@ -6,10 +6,10 @@ import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectFactory
 import org.gradle.util.ConfigureUtil
 
-import com.github.sebersole.gradle.quarkus.service.BuildDetails
 import com.github.sebersole.gradle.quarkus.Helper
 import com.github.sebersole.gradle.quarkus.dependency.ModuleVersionIdentifier
 import com.github.sebersole.gradle.quarkus.dependency.StandardModuleVersionIdentifier
+import com.github.sebersole.gradle.quarkus.service.BuildDetails
 
 /**
  * Models the Quarkus `extensions {}` block - in other words, all explicitly declared extensions.
@@ -87,8 +87,8 @@ class ExtensionsConfig {
 		ConfigureUtil.configure( closure, extension )
 	}
 
-	void extension(String name, Action action) {
-		def extension = extensionsContainer.maybeCreate( name )
+	void extension(String name, Action<ExtensionConfig> action) {
+		final ExtensionConfig extension = extensionsContainer.maybeCreate( name )
 		action.execute( extension )
 	}
 

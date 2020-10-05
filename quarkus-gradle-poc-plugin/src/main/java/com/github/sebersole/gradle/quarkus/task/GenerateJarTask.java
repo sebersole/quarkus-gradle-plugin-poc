@@ -3,23 +3,23 @@ package com.github.sebersole.gradle.quarkus.task;
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskAction;
 
-import com.github.sebersole.gradle.quarkus.QuarkusDsl;
-import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
+import com.github.sebersole.gradle.quarkus.service.Services;
 
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 
 /**
- * @author Steve Ebersole
+ * Generates a Quarkus jar
  */
 public class GenerateJarTask extends DefaultTask {
 	public static final String TASK_NAME = "generateQuarkusJar";
 
-	public static GenerateJarTask task(QuarkusDslImpl dsl) {
-		final GenerateJarTask task = dsl.getProject()
+	public static GenerateJarTask applyTo(Project project, Services services) {
+		final GenerateJarTask task = project
 				.getTasks()
-				.create( TASK_NAME, GenerateJarTask.class, dsl );
+				.create( TASK_NAME, GenerateJarTask.class, services );
 
 		task.setGroup( QUARKUS );
 		task.setDescription( "Generates a Quarkus executable JAR" );
@@ -28,12 +28,12 @@ public class GenerateJarTask extends DefaultTask {
 	}
 
 	@Inject
-	public GenerateJarTask(QuarkusDsl quarkusDsl) {
+	public GenerateJarTask(Services services) {
 	}
 
 	@TaskAction
 	public void generateJar() {
-		getLogger().lifecycle( "Creating Quarkus executable JAR" );
+		getLogger().trace( "Creating Quarkus executable JAR" );
 
 		// ...
 	}

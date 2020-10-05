@@ -1,6 +1,5 @@
 package com.github.sebersole.gradle.quarkus.task;
 
-import java.util.List;
 import java.util.Set;
 import javax.inject.Inject;
 
@@ -11,34 +10,33 @@ import org.gradle.api.tasks.TaskAction;
 
 import org.jboss.jandex.ClassInfo;
 
-import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
-import com.github.sebersole.gradle.quarkus.extension.orm.HibernateOrmExtension;
-import com.github.sebersole.gradle.quarkus.extension.orm.PersistenceUnit;
+import com.github.sebersole.gradle.quarkus.jpa.PersistenceUnit;
+import com.github.sebersole.gradle.quarkus.jpa.PersistenceUnitService;
+import com.github.sebersole.gradle.quarkus.service.Services;
 
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 import static com.github.sebersole.gradle.quarkus.Helper.REPORT_BANNER_LINE;
 import static com.github.sebersole.gradle.quarkus.Helper.REPORT_INDENTATION;
 
 /**
- * @author Steve Ebersole
+ * Task for showing all managed persistence-units
  */
 public class ShowPersistenceUnitsTask extends DefaultTask {
-	public static final String TASK_NAME = "showPersistenceUnits";
+	public static final String REGISTRATION_NAME = "showPersistenceUnits";
 
-	public static ShowPersistenceUnitsTask from(HibernateOrmExtension ormExtension, QuarkusDslImpl quarkusDsl) {
-		final ShowPersistenceUnitsTask task = quarkusDsl.getProject().getTasks().create(
-				TASK_NAME,
+	public static ShowPersistenceUnitsTask from(Services services) {
+		final ShowPersistenceUnitsTask task = services.getBuildDetails().getMainProject().getTasks().create(
+				REGISTRATION_NAME,
 				ShowPersistenceUnitsTask.class,
-				ormExtension,
-				quarkusDsl
+				services
 		);
 		task.setGroup( QUARKUS );
-		task.setDescription( "Displays information about JPA persistence-units recognized by Quarkus" );
+		task.setDescription( "Displays information about JPA persistence-units managed by Quarkus" );
 
-		final Task augmentationTask = quarkusDsl.getProject().getTasks().getByName( AugmentationTask.TASK_NAME );
+		final Task augmentationTask = services.getBuildDetails().getMainProject().getTasks().getByName( AugmentationTask.REGISTRATION_NAME );
 		task.dependsOn( augmentationTask );
 
-		final Configuration implementationDependencies = quarkusDsl.getProject().getConfigurations().getByName( "implementation" );
+		final Configuration implementationDependencies = services.getBuildDetails().getMainProject().getConfigurations().getByName( "implementation" );
 		// a strange bit of Gradle showing through.  we cannot resolve `implementation` ourselves.  Instead we need
 		// to create a new Configuration that "extends" `implementation` and resolve that.
 		//
@@ -49,45 +47,38 @@ public class ShowPersistenceUnitsTask extends DefaultTask {
 		//	...
 		//Caused by: java.lang.IllegalStateException: Resolving dependency configuration 'implementation' is not allowed as it is defined as 'canBeResolved=false'.
 		//Instead, a resolvable ('canBeResolved=true') dependency configuration that extends 'implementation' should be resolved.
-		final Configuration resolvable = quarkusDsl.getProject().getConfigurations().detachedConfiguration();
+		final Configuration resolvable = services.getBuildDetails().getMainProject().getConfigurations().detachedConfiguration();
 		resolvable.extendsFrom( implementationDependencies );
-		task.dependsOn( resolvable );
 
 		return task;
 	}
 
-	private final HibernateOrmExtension ormExtension;
-	private final QuarkusDslImpl quarkusDsl;
+	private final Services services;
 
 	@Inject
-	public ShowPersistenceUnitsTask(HibernateOrmExtension ormExtension, QuarkusDslImpl quarkusDsl) {
-		this.ormExtension = ormExtension;
-		this.quarkusDsl = quarkusDsl;
+	public ShowPersistenceUnitsTask(Services services) {
+		this.services = services;
 	}
 
 	@TaskAction
 	public void showPersistenceUnits() {
-		final List<PersistenceUnit> persistenceUnits = ormExtension.resolvePersistenceUnits();
+		services.getService( PersistenceUnitService.class ).forEach( this::showPersistenceUnit );
+	}
 
+	private void showPersistenceUnit(PersistenceUnit persistenceUnit) {
 		getLogger().lifecycle( REPORT_BANNER_LINE );
-		getLogger().lifecycle( "JPA persistence-unit information" );
+		getLogger().lifecycle( "JPA persistence-unit : {}", persistenceUnit.getUnitName() );
 		getLogger().lifecycle( REPORT_BANNER_LINE );
 
-		persistenceUnits.forEach(
-				unit -> {
-					getLogger().lifecycle( "{} > Persistence Unit : {}", REPORT_INDENTATION, unit.getUnitName() );
+		final Set<ClassInfo> classesToInclude = persistenceUnit.getClassesToInclude();
 
-					final Set<ClassInfo> classesToInclude = unit.getClassesToInclude();
-
-					if ( classesToInclude == null || classesToInclude.isEmpty() ) {
-						getLogger().lifecycle( "{}{} > {}", REPORT_INDENTATION, REPORT_INDENTATION, "none" );
-					}
-					else {
-						classesToInclude.forEach(
-								classInfo -> getLogger().lifecycle( "{}{} > {}", REPORT_INDENTATION, REPORT_INDENTATION, classInfo.simpleName() )
-						);
-					}
-				}
-		);
+		if ( classesToInclude == null || classesToInclude.isEmpty() ) {
+			getLogger().lifecycle( "{}{} > {}", REPORT_INDENTATION, REPORT_INDENTATION, "none" );
+		}
+		else {
+			classesToInclude.forEach(
+					classInfo -> getLogger().lifecycle( "{}{} > {}", REPORT_INDENTATION, REPORT_INDENTATION, classInfo.simpleName() )
+			);
+		}
 	}
 }

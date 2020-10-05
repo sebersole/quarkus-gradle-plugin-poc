@@ -1,15 +1,8 @@
-package com.github.sebersole.gradle.quarkus.extension.orm;
+package com.github.sebersole.gradle.quarkus.jpa;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.artifacts.ResolvedConfiguration;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
@@ -19,19 +12,17 @@ import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 
-import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.Logging;
-import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
-import com.github.sebersole.gradle.quarkus.dependency.MutableCompositeIndex;
 import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency;
-import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependencyFactory;
+import com.github.sebersole.gradle.quarkus.indexing.MutableCompositeIndex;
+import com.github.sebersole.gradle.quarkus.service.Services;
 
 import static com.github.sebersole.gradle.quarkus.indexing.JandexHelper.createJandexDotName;
 
 /**
  * @author Steve Ebersole
  */
-public class PersistenceUnitResolver {
+public class PersistenceUnitResolutionSupport {
 	public static final DotName JPA_PKG = createJandexDotName( "javax", "persistence" );
 	public static final DotName HHH_PKG = createJandexDotName( "org", "hibernate", "annotations" );
 
@@ -44,93 +35,24 @@ public class PersistenceUnitResolver {
 
 	public static final DotName HHH_ENTITY = DotName.createComponentized( HHH_PKG, "Entity" );
 
-	static List<PersistenceUnit> resolve(
-			Collection<PersistenceUnitConfig> unitConfigs,
-			QuarkusDslImpl quarkusDsl) {
 
-		final Map<String,PersistenceUnit> resolvedPersistenceUnits = new HashMap<>();
-		final Map<String, Set<String>> unitNamesByExplicitGav = new HashMap<>();
-
-		// as a "preliminary" step... go through the pu specific dependencies and
-
-		// first resolve the directly defined PU entries...
-		//		- this drives some of the later steps
-		unitConfigs.forEach(
-				unitConfig -> {
-					assert ! resolvedPersistenceUnits.containsKey( unitConfig.getUnitName() );
-
-					final PersistenceUnit persistenceUnit = new PersistenceUnit( unitConfig.getUnitName(), quarkusDsl );
-
-					resolvedPersistenceUnits.put( persistenceUnit.getUnitName(), persistenceUnit );
-
-					final ResolvedConfiguration resolvedExplicitInclusions = unitConfig.getDependencies().getResolvedConfiguration();
-					resolvedExplicitInclusions.getResolvedArtifacts().forEach(
-							resolvedArtifact -> {
-								final String gav = Helper.groupArtifactVersion( resolvedArtifact );
-								final ResolvedDependency resolvedDependency = quarkusDsl.getBuildState().findResolvedDependency( gav );
-								if ( resolvedDependency == null ) {
-									throw new GradleException( "Unable to locate ResolvedDependency(" + gav + ")" );
-								}
-
-								applyDependency( resolvedDependency, persistenceUnit, quarkusDsl );
-								final Set<String> unitNames = unitNamesByExplicitGav.computeIfAbsent(
-										resolvedDependency.getGav(),
-										(s) -> new HashSet<>()
-								);
-
-								unitNames.add( persistenceUnit.getUnitName() );
-							}
-					);
-				}
-		);
-
-		// at this point all of the explicit/direct inclusions have been processed.  Now we want to
-		// process all resolved dependencies to see if they include any JPA "managed classes".
-		//
-		// we want to be careful however to not process:
-		//		1) any that are already included in the PU : `unitNamesByExplicitGav.get( gav ).contains( unitName )`
-		//		2) any that were explicitly defined as part of another PU : `unitNamesByExplicitGav.get( gav ).contains( unitName )`
-
-		final ResolvedConfiguration resolvedConfiguration = quarkusDsl.getRuntimeDependencies().getResolvedConfiguration();
-
-		resolvedConfiguration.getResolvedArtifacts().forEach(
-				resolvedArtifact -> {
-					final String gav = Helper.groupArtifactVersion( resolvedArtifact );
-					final Set<String> unitsIncludingGav = unitNamesByExplicitGav.get( gav );
-					final ResolvedDependency resolvedDependency = quarkusDsl.getBuildState().findResolvedDependency( gav );
-
-					resolvedPersistenceUnits.forEach(
-							(unitName, unit) -> {
-								if ( unitsIncludingGav == null || unitsIncludingGav.isEmpty() ) {
-									// no units explicitly named that dependency - add it to each
-									applyDependency( resolvedDependency, unit, quarkusDsl );
-								}
-							}
-					);
-
-				}
-		);
-
-		return new ArrayList<>( resolvedPersistenceUnits.values() );
-	}
-
-
-	private static void applyDependency(
+	public static void applyDependency(
 			ResolvedDependency resolvedDependency,
 			PersistenceUnit unit,
-			QuarkusDslImpl quarkusDsl) {
+			Services services) {
 		if ( resolvedDependency == null ) {
 			return;
 		}
 
-		final MutableCompositeIndex compositeJandexIndex = quarkusDsl.getBuildState().getResolvedCompositeIndex();
-		final IndexView jandexIndex = resolvedDependency.getJandexIndexAccess().get();
+		final MutableCompositeIndex compositeIndex = services.getIndexingService().getCompositeIndex();
+		final IndexView jandexIndex = resolvedDependency.getIndexAccess().getIndex();
 
 		// first look for things which have identifying annotations on the classes...
 		applyFromClass(
 				jandexIndex,
 				unit,
-				compositeJandexIndex,
+				compositeIndex,
+				services,
 				JPA_ENTITY,
 				JPA_CONVERTER_ANN,
 				JPA_EMBEDDABLE,
@@ -141,7 +63,8 @@ public class PersistenceUnitResolver {
 		consumeFromTargetType(
 				jandexIndex,
 				unit,
-				compositeJandexIndex,
+				compositeIndex,
+				services,
 				JPA_EMBEDDED,
 				JPA_EMBEDDED_ID
 		);
@@ -150,6 +73,7 @@ public class PersistenceUnitResolver {
 		consumeImplementors(
 				jandexIndex,
 				unit,
+				services,
 				JPA_CONVERTER
 		);
 	}
@@ -158,6 +82,7 @@ public class PersistenceUnitResolver {
 			IndexView jandexIndex,
 			PersistenceUnit unit,
 			IndexView compositeJandexIndex,
+			Services services,
 			DotName... annotationNames) {
 		for ( int i = 0; i < annotationNames.length; i++ ) {
 			final Collection<AnnotationInstance> uses = jandexIndex.getAnnotationsWithRepeatable( annotationNames[i], compositeJandexIndex );
@@ -166,7 +91,7 @@ public class PersistenceUnitResolver {
 						final AnnotationTarget target = usage.target();
 						// can only happen on classes...
 						assert target instanceof ClassInfo;
-						collectClass( (ClassInfo) target, unit );
+						collectClass( (ClassInfo) target, unit, services );
 					}
 			);
 		}
@@ -176,7 +101,7 @@ public class PersistenceUnitResolver {
 			IndexView jandexIndex,
 			PersistenceUnit unit,
 			IndexView compositeJandexIndex,
-			DotName... annotationNames) {
+			Services services, DotName... annotationNames) {
 		for ( int i = 0; i < annotationNames.length; i++ ) {
 			final Collection<AnnotationInstance> uses = jandexIndex.getAnnotations( annotationNames[ i ] );
 			uses.forEach(
@@ -207,7 +132,7 @@ public class PersistenceUnitResolver {
 							Logging.LOGGER.debug( "Could not locate referenced class type : {}", referencedClassName.toString() );
 						}
 						else {
-							collectClass( referencedClassInfo, unit );
+							collectClass( referencedClassInfo, unit, services );
 						}
 					}
 			);
@@ -217,13 +142,19 @@ public class PersistenceUnitResolver {
 	private static void consumeImplementors(
 			IndexView jandexIndex,
 			PersistenceUnit unit,
+			Services services,
 			DotName... typeNames) {
 		for ( int i = 0; i < typeNames.length; i++ ) {
-			unit.applyClassesToInclude( jandexIndex.getAllKnownImplementors( typeNames[i] ) );
+			final Collection<ClassInfo> implementors = jandexIndex.getAllKnownImplementors( typeNames[ i ] );
+			implementors.forEach( classInfo -> collectClass( classInfo, unit, services ) );
 		}
 	}
 
-	private static void collectClass(ClassInfo classInfo, PersistenceUnit unit) {
+	private static void collectClass(ClassInfo classInfo, PersistenceUnit unit, Services services) {
+		services.getBuildDetails()
+				.getMainProject()
+				.getLogger()
+				.debug( "Collecting `{}` as managed persistence-unit Class : {}", classInfo.simpleName(), unit.getUnitName() );
 		unit.applyClassToInclude( classInfo );
 	}
 }

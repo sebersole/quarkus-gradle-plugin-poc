@@ -1,121 +1,161 @@
 package com.github.sebersole.gradle.quarkus.task;
 
 import java.io.File;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.file.RegularFile;
+import org.gradle.api.file.Directory;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.SourceSetOutput;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.FileChange;
+import org.gradle.work.Incremental;
+import org.gradle.work.InputChanges;
 
 import org.jboss.jandex.Index;
 
-import com.github.sebersole.gradle.quarkus.Logging;
-import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
-import com.github.sebersole.gradle.quarkus.indexing.IndexAccess;
-import com.github.sebersole.gradle.quarkus.indexing.JandexHelper;
+import com.github.sebersole.gradle.quarkus.indexing.IndexManager;
+import com.github.sebersole.gradle.quarkus.service.Services;
 
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 
 /**
- * Responsible for managing the Jandex Index for a single dependency
+ * Jandex task for managing Indexes for each dependency
  */
-public class JandexTask extends DefaultTask {
-	public static final String TASK_NAME = "quarkusJandex";
+public abstract class JandexTask extends DefaultTask {
+	public static final String REGISTRATION_NAME = "quarkusJandex";
 
-	public static IndexAccess apply(String gav, ResolvedArtifact resolvedArtifact, QuarkusDslImpl quarkusDsl) {
-		final Project project = quarkusDsl.getProject();
-
-		final String uniqueName = JandexHelper.makeUniqueName( resolvedArtifact );
-		final String jandexTaskName = TASK_NAME + "_" + uniqueName;
-		final String indexFileName = uniqueName + ".idx";
-
-		final RegularFile indexFile = quarkusDsl.getWorkingDir().dir( "jandex" ).file( indexFileName );
-
+	public static JandexTask applyTo(Project project, Services services) {
 		final JandexTask jandexTask = project.getTasks().create(
-				jandexTaskName,
+				REGISTRATION_NAME,
 				JandexTask.class,
-				gav,
-				resolvedArtifact.getFile(),
-				indexFile,
-				quarkusDsl
+				services
 		);
 		jandexTask.setGroup( QUARKUS );
-		jandexTask.setDescription( "Manages Jandex index related with `" + gav + "`" );
+		jandexTask.setDescription( "Jandex Index management for Quarkus augmentation" );
 
-		final Task groupingTask = project.getTasks().getByName( TASK_NAME );
-		groupingTask.dependsOn( jandexTask );
+//		services.getProjectService().visitAllProjects(
+//				projectInfo -> {
+//					final SourceSet mainSourceSet = projectInfo.getMainSourceSet();
+//					final String compileJavaTaskName = mainSourceSet.getCompileJavaTaskName();
+//
+//					final Project visitedProject = project.project( projectInfo.getPath() );
+//					final Task javacTask = visitedProject.getTasks().getByName( compileJavaTaskName );
+//
+//					jandexTask.dependsOn( javacTask );
+//				}
+//		);
 
-		return new IndexAccess( gav, jandexTask::accessJandexIndex, quarkusDsl );
+		return jandexTask;
 	}
 
-	private final String gav;
-	private final File dependencyArtifactBase;
-	private final RegularFile indexFile;
+	private final Services services;
 
-	private final QuarkusDslImpl quarkusDsl;
-
-	private Index index;
-	private boolean resolved;
-
+	private Set<String> externalDependencies;
 
 	@Inject
-	public JandexTask(String gav, File dependencyArtifactBase, RegularFile indexFile, QuarkusDslImpl quarkusDsl) {
-		this.gav = gav;
-		this.dependencyArtifactBase = dependencyArtifactBase;
-		this.indexFile = indexFile;
+	public JandexTask(Services services) {
+		this.services = services;
+	}
 
-		this.quarkusDsl = quarkusDsl;
-
-		setGroup( QUARKUS );
-		setDescription( "Manages Jandex index related with `" + gav + "`" );
+	@OutputDirectory
+	public Directory getOutputDirectory() {
+		return services.getIndexingService().getJandexDirectory();
 	}
 
 	@Input
-	public String getGav() {
-		return gav;
+	public Set<String> getIndexedExternalArtifacts() {
+		// NOTE : this should be called when determining the task-execution-graph
+		//		which happens after project configuration/evaluation.  At this point,
+		//		all dependencies should have been registered
+		//
+		// NOTE2 : for the external dependencies, we only care about the artifact id (group-artifact-id), not the file contents
+		if ( externalDependencies == null ) {
+			externalDependencies = services.getIndexingService()
+					.getIndexedExternalArtifactBases()
+					.stream()
+					.map( File::getAbsolutePath )
+					.collect( Collectors.toSet() );
+		}
+
+		return externalDependencies;
 	}
 
-	@InputFile
-	public File getDependencyArtifactBase() {
-		return dependencyArtifactBase;
-	}
-
-	@OutputFile
-	public RegularFile getIndexFile() {
-		return indexFile;
+	@Incremental
+	@InputFiles
+	public SourceSetOutput getIndexedProjectOutput() {
+		// todo : need to figure out the best way to apply this to multiple projects.
+		//		- one option is to generate a task per project-to-be-indexed
+		return services.getProjectService().getMainProject().getMainSourceSet().getOutput();
 	}
 
 	@TaskAction
-	public void resolveIndex() {
-		this.index = JandexHelper.resolveJandexIndex( gav, dependencyArtifactBase, indexFile, quarkusDsl );
-		this.resolved = true;
+	public void manageIndexes(InputChanges inputChanges) {
+		getLogger().trace( "Starting {} task", REGISTRATION_NAME );
+
+		final HashSet<String> existingIndexFiles = new HashSet<>();
+		getOutputDirectory().getAsFileTree().forEach( file -> existingIndexFiles.add( file.getAbsolutePath() ) );
+
+		manageExternalArtifactIndexes( existingIndexFiles );
+		manageProjectIndexes( existingIndexFiles, inputChanges );
+
+		existingIndexFiles.forEach(
+				noLongerNeededIndexFileName -> {
+					final File file = getProject().file( noLongerNeededIndexFileName );
+					file.delete();
+				}
+		);
 	}
 
-	public Index accessJandexIndex() {
-		if ( resolved ) {
-			return index;
+	private void manageExternalArtifactIndexes(Set<String> existingIndexFiles) {
+		services.getIndexingService().forEachExternalArtifactIndexer(
+				indexManager -> {
+					// notes:
+					//		`artifact` is the jar
+					//		`indexManager#getIndexFile` is the index file
+					final boolean previouslyIndexed = existingIndexFiles.remove( indexManager.getIndexFile().getAbsolutePath() );
+					if ( previouslyIndexed ) {
+						reloadIndex( indexManager );
+					}
+					else {
+						generateIndex( indexManager );
+					}
+				}
+		);
+	}
+
+	private void generateIndex(IndexManager indexManager) {
+		final Index index = indexManager.generateIndex();
+		services.getIndexingService().getCompositeIndex().expand( index );
+	}
+
+	private void reloadIndex(IndexManager indexManager) {
+		final Index index = indexManager.readIndex();
+		services.getIndexingService().getCompositeIndex().expand( index );
+	}
+
+	private void manageProjectIndexes(Set<String> existingIndexFiles, InputChanges inputChanges) {
+		final IndexManager indexManager = services.getIndexingService().findIndexManagerByBase(
+				services.getProjectService().getMainProject().getProjectDirectory().getAsFile()
+		);
+
+		assert indexManager != null;
+
+		existingIndexFiles.remove( indexManager.getIndexFile().getAbsolutePath() );
+
+		final Iterable<FileChange> fileChanges = inputChanges.getFileChanges( getIndexedProjectOutput() );
+		final boolean hadChanges = fileChanges.iterator().hasNext();
+		if ( hadChanges ) {
+			generateIndex( indexManager );
 		}
-
-		Logging.LOGGER.debug( "Resolving Jandex index for dependency `{}`", gav );
-
-		final boolean beingExecuted = getProject().getGradle().getTaskGraph().hasTask( this );
-		if ( beingExecuted ) {
-			resolveIndex();
-			return index;
+		else {
+			reloadIndex( indexManager );
 		}
-
-		// otherwise, just load the index file we've created previously...
-		assert indexFile.getAsFile().exists();
-		this.index = JandexHelper.readJandexIndex( indexFile.getAsFile() );
-		this.resolved = true;
-
-		return index;
 	}
 }

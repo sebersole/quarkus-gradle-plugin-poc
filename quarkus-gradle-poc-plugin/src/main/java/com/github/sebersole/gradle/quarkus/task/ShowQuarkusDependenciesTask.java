@@ -5,48 +5,35 @@ import java.util.Set;
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.artifacts.ResolvedConfiguration;
 import org.gradle.api.tasks.TaskAction;
 
-import com.github.sebersole.gradle.quarkus.extension.Extension;
 import com.github.sebersole.gradle.quarkus.Helper;
-import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
+import com.github.sebersole.gradle.quarkus.extension.Extension;
+import com.github.sebersole.gradle.quarkus.service.Services;
 
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 import static com.github.sebersole.gradle.quarkus.Helper.REPORT_BANNER_LINE;
 import static com.github.sebersole.gradle.quarkus.Helper.REPORT_INDENTATION;
 
 /**
- * @author Steve Ebersole
+ * Task for showing Quarkus dependencies, by extension
  */
 public class ShowQuarkusDependenciesTask extends DefaultTask {
 	public static final String TASK_NAME = "showQuarkusDependencies";
 
-	public static ShowQuarkusDependenciesTask task(QuarkusDslImpl dsl) {
-		final ShowQuarkusDependenciesTask task = dsl.getProject()
+	public static ShowQuarkusDependenciesTask applyTo(Project project, Services services) {
+		final ShowQuarkusDependenciesTask task = project
 				.getTasks()
-				.create( TASK_NAME, ShowQuarkusDependenciesTask.class, dsl );
+				.create( TASK_NAME, ShowQuarkusDependenciesTask.class, services );
 
 		task.setGroup( QUARKUS );
 		task.setDescription( "Shows dependency information per Quarkus extension.  Can also call `showQuarkusDependencies_<extension>` to limit the info to just the named extension" );
 
-		return task;
-	}
-
-
-	private final QuarkusDslImpl quarkusDsl;
-
-	@Inject
-	public ShowQuarkusDependenciesTask(QuarkusDslImpl quarkusDsl) {
-		this.quarkusDsl = quarkusDsl;
-		setGroup( QUARKUS );
-		setDescription( "Outputs all Quarkus extension dependencies" );
-
-		quarkusDsl.getProject().getTasks().addRule(
+		project.getTasks().addRule(
 				"Pattern: showQuarkusDependencies_<extension>",
 				taskName -> {
 					if ( taskName.startsWith( "showQuarkusDependencies" )
@@ -56,22 +43,32 @@ public class ShowQuarkusDependenciesTask extends DefaultTask {
 						final int delimiterPosition = taskName.indexOf( '_' );
 						assert delimiterPosition > 1;
 						final String extensionName = taskName.substring( delimiterPosition + 1 );
-						final Extension extensionInfo = quarkusDsl.getQuarkusExtensions().getByName( extensionName );
+						final Extension extensionInfo = services.getExtensionService().getByName( extensionName );
 
-						final Task task = quarkusDsl.getProject().task( taskName );
-						task.doLast(
-								(task1) -> showExtension( extensionInfo )
+						final Task ruleTask = project.getTasks().create( taskName );
+						ruleTask.doLast(
+								(task1) -> task.showExtension( extensionInfo )
 						);
 					}
 				}
 		);
+
+		return task;
+	}
+
+
+	private final Services services;
+
+	@Inject
+	public ShowQuarkusDependenciesTask(Services services) {
+		this.services = services;
+		setGroup( QUARKUS );
+		setDescription( "Outputs all Quarkus extension dependencies" );
 	}
 
 	@TaskAction
 	public void show() {
-		quarkusDsl.getQuarkusExtensions().forEach(
-				extension -> showExtension( extension )
-		);
+		services.getExtensionService().visitExtensions( this::showExtension );
 	}
 
 	private void showExtension(Extension extension) {

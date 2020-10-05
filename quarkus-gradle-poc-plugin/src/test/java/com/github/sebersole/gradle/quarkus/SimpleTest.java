@@ -7,7 +7,6 @@ import org.gradle.testkit.runner.BuildTask;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -15,9 +14,9 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 
 import static com.github.sebersole.gradle.quarkus.TestHelper.jandexOutputDir;
-import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.endsWith;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -42,15 +41,14 @@ public class SimpleTest {
 
 	@Test
 	public void testBasicProjectLoading() {
-		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" );
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple", "dependencies" );
 
 		gradleRunner.build();
 	}
 
 	@Test
 	public void testCleaning() {
-		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "clean" );
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple", "clean" );
 
 		final BuildResult results = gradleRunner.build();
 
@@ -63,8 +61,7 @@ public class SimpleTest {
 
 	@Test
 	public void testShowExtensions() {
-		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "showQuarkusExtensions" );
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple", "showQuarkusExtensions" );
 
 		final BuildResult buildResult = gradleRunner.build();
 
@@ -85,8 +82,7 @@ public class SimpleTest {
 
 	@Test
 	public void testListExtensions() {
-		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "listExtensions" );
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple", "listExtensions" );
 
 		final BuildResult buildResult = gradleRunner.build();
 
@@ -99,8 +95,7 @@ public class SimpleTest {
 
 	@Test
 	public void testShowDependencies() {
-		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "clean", "showQuarkusDependencies", "--stacktrace" );
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple", "clean", "showQuarkusDependencies" );
 
 		final BuildResult buildResult = gradleRunner.build();
 
@@ -118,8 +113,7 @@ public class SimpleTest {
 
 	@Test
 	public void testShowLimitedDependencies() {
-		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "clean", "showQuarkusDependencies_hibernateOrm", "--stacktrace" );
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple", "clean", "showQuarkusDependencies_hibernateOrm" );
 
 		final BuildResult buildResult = gradleRunner.build();
 
@@ -136,7 +130,7 @@ public class SimpleTest {
 	@Test
 	@Disabled( "https://discuss.gradle.org/t/testkit-and-up-to-date-checking/37684/2" )
 	public void testJandexTask() {
-		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" );
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple", "clean", "quarkusJandex" );
 
 		final File jandexDir = jandexOutputDir( gradleRunner );
 
@@ -145,7 +139,7 @@ public class SimpleTest {
 		//		2) we need to verify this actually works in a "real" consumer project
 
 
-		final BuildResult buildResult = gradleRunner.withArguments( "clean", "quarkusJandex", "--stacktrace" ).build();
+		final BuildResult buildResult = gradleRunner.build();
 
 		final BuildTask taskResult = buildResult.task( ":quarkusJandex" );
 		assertThat( taskResult, notNullValue() );
@@ -165,8 +159,13 @@ public class SimpleTest {
 
 	@Test
 	public void testShowPersistenceUnitsTask() {
-		final GradleRunner gradleRunner = TestHelper.createGradleRunner( "simple" )
-				.withArguments( "clean", "showPersistenceUnits", "--stacktrace" );
+		final GradleRunner gradleRunner = TestHelper.createGradleRunner(
+				"simple",
+				"clean",
+				"quarkusJandex",
+				"quarkusAugmentation",
+				"showPersistenceUnits"
+		);
 
 		final BuildResult buildResult = gradleRunner.build();
 
@@ -174,8 +173,8 @@ public class SimpleTest {
 		assertThat( taskResult, notNullValue() );
 		assertThat( taskResult.getOutcome(), is( TaskOutcome.SUCCESS ) );
 
-		assertThat( buildResult.getOutput(), containsString( "> Persistence Unit : abc" ) );
-		assertThat( buildResult.getOutput(), containsString( "> Persistence Unit : xyz" ) );
+		assertThat( buildResult.getOutput(), containsString( "JPA persistence-unit : abc" ) );
+		assertThat( buildResult.getOutput(), containsString( "JPA persistence-unit : xyz" ) );
 	}
 
 }

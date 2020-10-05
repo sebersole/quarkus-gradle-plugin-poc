@@ -12,6 +12,11 @@ ext {
 }
 
 dependencies {
+    // 3rd way (you'll get the joke later) to specify a Quarkus platform.
+    // see discussion in `platforms {}`
+
+    // here again, we have functionally the same as `platforms { quarkusUniverse() }`
+
     // example of a non-core BOM
     quarkusPlatforms enforcedPlatform( "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}" )
 }
@@ -19,22 +24,33 @@ dependencies {
 quarkus {
     quarkusVersion = project.quarkusVersion
 
-    testProfile = "qa"
+    //testProfile = "qa"
 
     nativeArgs {
         containerBuild true
         buildImage "that/image:yadda-yadda"
     }
 
-    // alternative way to register platforms through the DSL
-    //      - handled as an `#enforcedPlatform`
-    platform "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}"
+    platforms {
+        quarkusUniverse()
+
+        // generalized syntax
+        //      -- note that this specific case is functionally the same as `quarkusUniverse()` above
+        platform "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}"
+
+        // platforms may also be added to the `quarkusPlatforms` Configuration through the
+        // project's `dependencies {}` block.  Note that platforms added here are *enforced* while
+        // platforms added directly via `dependencies {}` will not necessarily be unless explicitly
+        // requested
+    }
 
     quarkusExtensions {
-        // Grrr... https://discuss.gradle.org/t/what-is-up-with-this-forum-and-its-silly-title-problem/37648
-        //hibernate( HibernateOrmExtension ) {
-        hibernateOrm {
-            databaseFamily = "derby"
+// Grrr... https://discuss.gradle.org/t/what-is-up-with-this-forum-and-its-silly-title-problem/37648
+//        orm(HibernateOrmExtension) {
+//            // ...
+//        }
+        hibernateOrm() {
+            databaseFamily = 'derby'
 
             persistenceUnits {
                 abc {
@@ -48,9 +64,7 @@ quarkus {
             }
         }
 
-        hibernateValidator {
-            quarkusArtifact( 'hibernate-validator' )
-        }
+        quarkusExtension( 'hibernate-validator' )
 
         jodaTime {
             artifact 'joda-time:joda-time:2.10.6'

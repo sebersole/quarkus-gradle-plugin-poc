@@ -3,21 +3,21 @@ package com.github.sebersole.gradle.quarkus.task;
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskAction;
 
-import com.github.sebersole.gradle.quarkus.QuarkusDsl;
-import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
+import com.github.sebersole.gradle.quarkus.service.Services;
 
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 
 /**
- * @author Steve Ebersole
+ * Generates a Quarkus fat-jar
  */
 public class GenerateFatJarTask extends DefaultTask {
-	public static GenerateFatJarTask task(QuarkusDslImpl dsl) {
-		final GenerateFatJarTask task = dsl.getProject()
+	public static GenerateFatJarTask applyTo(Project project, Services services) {
+		final GenerateFatJarTask task = project
 				.getTasks()
-				.create( GenerateFatJarTask.TASK_NAME, GenerateFatJarTask.class, dsl );
+				.create( GenerateFatJarTask.TASK_NAME, GenerateFatJarTask.class, services );
 
 		task.setGroup( QUARKUS );
 		task.setDescription( "Generates a Quarkus fat JAR" );
@@ -28,12 +28,12 @@ public class GenerateFatJarTask extends DefaultTask {
 	public static final String TASK_NAME = "generateQuarkusFatJar";
 
 	@Inject
-	public GenerateFatJarTask(QuarkusDsl quarkusDsl) {
+	public GenerateFatJarTask(Services services) {
 	}
 
 	@TaskAction
 	public void generateJar() {
-		getLogger().lifecycle( "Creating Quarkus fat executable JAR" );
+		getLogger().trace( "Creating Quarkus fat executable JAR" );
 
 		// ...
 	}

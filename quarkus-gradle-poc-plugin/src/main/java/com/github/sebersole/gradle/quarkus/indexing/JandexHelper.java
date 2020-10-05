@@ -14,9 +14,6 @@ import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.artifacts.ResolvedArtifact;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.file.RegularFile;
 
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Index;
@@ -26,9 +23,7 @@ import org.jboss.jandex.Indexer;
 
 import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.Logging;
-import com.github.sebersole.gradle.quarkus.QuarkusDsl;
-import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
-import com.github.sebersole.gradle.quarkus.task.JandexTask;
+import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency;
 
 import static com.github.sebersole.gradle.quarkus.Helper.JANDEX_INDEX_FILE_PATH;
 
@@ -36,8 +31,25 @@ import static com.github.sebersole.gradle.quarkus.Helper.JANDEX_INDEX_FILE_PATH;
  * Useful functions for dealing with Jandex
  */
 public class JandexHelper {
+	public static final String JANDEX = "jandex";
+
 	private JandexHelper() {
 		// disallow direct instantiation
+	}
+
+	public static String indexFileName(ResolvedDependency dependency) {
+		return indexFileNameBase( dependency ) + ".idx";
+	}
+
+	private static String indexFileNameBase(ResolvedDependency dependency) {
+		if ( dependency instanceof com.github.sebersole.gradle.quarkus.dependency.ProjectDependency ) {
+			return dependency.getArtifactName();
+		}
+		else if ( dependency instanceof com.github.sebersole.gradle.quarkus.dependency.ExternalDependency ) {
+			return dependency.getGroupName() + "___" + dependency.getArtifactName() + "___" + dependency.getVersion();
+		}
+
+		throw new UnsupportedOperationException();
 	}
 
 	/**
@@ -56,69 +68,67 @@ public class JandexHelper {
 		return result;
 	}
 
-	public static String makeUniqueName(ResolvedArtifact resolvedArtifact) {
-		return Helper.sanitize( resolvedArtifact.getName() ) + "__" + Helper.sanitize( resolvedArtifact.getName() );
+
+	public static Index resolveIndexFromArchive(JarFile jarFile, File jarFileFile) {
+		final ZipEntry entry = jarFile.getEntry( JANDEX_INDEX_FILE_PATH );
+		if ( entry != null ) {
+			// the archiveFile contained a Jandex index file, use it
+			return readJandexIndex( entry, jarFile, jarFileFile );
+		}
+
+		// otherwise, create an index from the artifact
+		return createJandexIndex( jarFile, jarFileFile );
 	}
 
-	public static String artifactTaskName(ResolvedArtifact resolvedArtifact) {
-		return JandexTask.TASK_NAME + "_" + makeUniqueName( resolvedArtifact );
+	private static Index createJandexIndex(JarFile jarFile, File jarFileFile) {
+		final Indexer indexer = new Indexer();
 
+		final Enumeration<JarEntry> entries = jarFile.entries();
+		while ( entries.hasMoreElements() ) {
+			final JarEntry jarEntry = entries.nextElement();
+
+			if ( jarEntry.getName().endsWith( ".class" ) ) {
+				try ( final InputStream stream = jarFile.getInputStream( jarEntry ) ) {
+					indexer.index( stream );
+				}
+				catch (Exception e) {
+					Logging.LOGGER.debug(
+							"Unable to index archive entry (`{}`) from archive (`{}`)",
+							jarEntry.getRealName(),
+							jarFileFile.getAbsolutePath()
+					);
+				}
+			}
+		}
+
+		return indexer.complete();
 	}
 
-	public static String outputFileName(ResolvedArtifact resolvedArtifact) {
-		return makeUniqueName( resolvedArtifact ) + ".idx";
-	}
-
-	/**
-	 * @see IndexResolver
-	 */
-	public static Index resolveJandexIndex(
-			String gav,
-			File artifactBase,
-			RegularFile outputFile,
-			QuarkusDslImpl quarkusDsl) {
-		Logging.LOGGER.trace( "Resolving Jandex index for dependency `{}`", gav );
-
-		if ( ! artifactBase.exists() ) {
-			Logging.LOGGER.debug(
-					"Skipping indexing dependency `{}` as it's base does not physically exist : {}",
-					gav,
-					artifactBase.getAbsolutePath()
+	private static Index readJandexIndex(ZipEntry indexEntry, JarFile jarFile, File jarFileFile) {
+		try ( final InputStream indexStream = jarFile.getInputStream( indexEntry ) ) {
+			return readJandexIndex( () -> indexStream );
+		}
+		catch (FileNotFoundException e) {
+			throw new GradleException(
+					String.format(
+							Locale.ROOT,
+							"Unable to access InputStream from ZipEntry relative to `%s`",
+							jarFileFile.getAbsolutePath()
+					),
+					e
 			);
-			return null;
+		}
+		catch (IOException e) {
+			Logging.LOGGER.debug(
+					"IOException accessing Jandex index file [{}] : {}",
+					jarFileFile.getAbsolutePath(),
+					e.getMessage()
+			);
 		}
 
-		final Index index;
-		if ( artifactBase.isDirectory() ) {
-			// handle (local) project-based dependency
-			index = resolveIndexFromDirectory( artifactBase, quarkusDsl );
-		}
-		else {
-			// assume it is an archive
-			index = resolveIndexFromArchive( gav, artifactBase );
-		}
-
-		if ( index == null ) {
-			Logging.LOGGER.debug( "Unable to resolve Jandex index from dependency `{}`", gav );
-			return null;
-		}
-
-		writeIndexToFile( outputFile.getAsFile(), index, quarkusDsl );
-
-		return index;
+		return null;
 	}
 
-	private static Index resolveIndexFromDirectory(File directory, QuarkusDsl quarkusDsl) {
-		assert directory.exists();
-
-		final File indexFileLocation = new File( directory, JANDEX_INDEX_FILE_PATH );
-		if ( indexFileLocation.exists() ) {
-			return readJandexIndex( indexFileLocation );
-		}
-
-		// otherwise, generate it from the artifact
-		return createJandexIndex( indexFileLocation, quarkusDsl );
-	}
 
 	/**
 	 * Read a Jandex index file and return the "serialized" index
@@ -153,113 +163,16 @@ public class JandexHelper {
 		return reader.read();
 	}
 
-	private static Index createJandexIndex(File directory, QuarkusDsl quarkusDsl) {
-		assert directory.isDirectory();
-
-		return createJandexIndex( quarkusDsl.getProject().files( directory ) );
-	}
-
-	private static Index createJandexIndex(FileCollection fileCollection) {
-		final Indexer jandexIndexer = new Indexer();
-		fileCollection.forEach(
-				file -> {
-					assert file.exists();
-
-					if ( ! file.isDirectory() ) {
-						try ( final InputStream inputStream = new FileInputStream( file ) ) {
-							jandexIndexer.index( inputStream );
-						}
-						catch ( FileNotFoundException e ) {
-							Logging.LOGGER.debug( "Unable to find input file for indexing : {}", file.getAbsolutePath() );
-						}
-						catch ( IOException e ) {
-							Logging.LOGGER.debug( "Unable to access input file for indexing : {}", file.getAbsolutePath() );
-						}
-					}
-				}
-		);
-
-		return jandexIndexer.complete();
-	}
-
-	private static Index resolveIndexFromArchive(String gav, File artifactBase) {
-		assert artifactBase.exists();
-
-		final JarFile jarFile;
-		try {
-			jarFile = new JarFile( artifactBase );
-		}
-		catch (IOException e) {
-			Logging.LOGGER.debug( "Exception trying to handle dependency artifact as a JAR" );
-			return null;
-		}
-
-		final ZipEntry entry = jarFile.getEntry( JANDEX_INDEX_FILE_PATH );
-		if ( entry != null ) {
-			// the archive contained a Jandex index file, use it
-			return readJandexIndex( entry, jarFile, artifactBase );
-		}
-
-		// otherwise, create an index from the artifact
-		return createJandexIndex( gav, jarFile, artifactBase );
-	}
-
-	private static Index readJandexIndex(ZipEntry indexEntry, JarFile jarFile, File jarFileFile) {
-		try ( final InputStream indexStream = jarFile.getInputStream( indexEntry ) ) {
-			return readJandexIndex( () -> indexStream );
-		}
-		catch (FileNotFoundException e) {
-			throw new GradleException(
-					String.format(
-							Locale.ROOT,
-							"Unable to access InputStream from ZipEntry relative to `%s`",
-							jarFileFile.getAbsolutePath()
-					),
-					e
-			);
-		}
-		catch (IOException e) {
-			Logging.LOGGER.debug(
-					"IOException accessing Jandex index file [{}] : {}",
-					jarFileFile.getAbsolutePath(),
-					e.getMessage()
-			);
-		}
-
-		return null;
-	}
-
-	private static Index createJandexIndex(String gav, JarFile jarFile, File jarFileFile) {
-		final Indexer indexer = new Indexer();
-
-		final Enumeration<JarEntry> entries = jarFile.entries();
-		while ( entries.hasMoreElements() ) {
-			final JarEntry jarEntry = entries.nextElement();
-
-			if ( jarEntry.getName().endsWith( ".class" ) ) {
-				try ( final InputStream stream = jarFile.getInputStream( jarEntry ) ) {
-					indexer.index( stream );
-				}
-				catch (Exception e) {
-					Logging.LOGGER.debug(
-							"Unable to index archive entry (`{}`) from archive (`{}`) for {}",
-							jarEntry.getRealName(),
-							jarFileFile.getAbsolutePath(),
-							gav
-					);
-				}
-			}
-		}
-
-		return indexer.complete();
-	}
-
 	/**
 	 * Write an Index to the specified File
 	 */
-	public static void writeIndexToFile(File outputFile, Index jandexIndex, QuarkusDsl quarkusDsl) {
+	public static void writeIndexToFile(File outputFile, Index jandexIndex) {
 		try {
-			Helper.ensureFileExists( outputFile, quarkusDsl );
+			final boolean deleted = outputFile.delete();
+			if ( ! deleted ) {
+				Logging.LOGGER.debug( "Unable to delete index file : {}", outputFile.getAbsolutePath() );
+			}
+			Helper.ensureFileExists( outputFile );
 
 			try ( final FileOutputStream out = new FileOutputStream( outputFile ) ) {
 				final IndexWriter indexWriter = new IndexWriter( out );
@@ -268,6 +181,62 @@ public class JandexHelper {
 		}
 		catch ( IOException e ) {
 			Logging.LOGGER.debug( "Unable to create Jandex index file {} : {}", outputFile.getAbsolutePath(), e.getMessage() );
+		}
+	}
+
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Used for project indexing
+
+	public static void applyDirectory(File directory, Indexer indexer) {
+		if ( ! directory.exists() ) {
+			Logging.LOGGER.debug( "Skipping indexing of directory because it does not exist : {}", directory.getAbsolutePath() );
+		}
+
+		internalApplyDirectory( directory, indexer );
+	}
+
+	private static void internalApplyDirectory(File directory, Indexer indexer) {
+		if ( ! directory.exists() ) {
+			return;
+		}
+
+		if ( ! directory.isDirectory() ) {
+			throw new GradleException( "Directory to apply to Indexer was not a directory : " + directory.getAbsolutePath() );
+		}
+
+		final File[] elements = directory.listFiles();
+		if ( elements == null ) {
+			Logging.LOGGER.debug( "Skipping indexing of directory because it is empty : {}", directory.getAbsolutePath() );
+			return;
+		}
+
+		for ( int i = 0; i < elements.length; i++ ) {
+			if ( elements[ i ].isFile() ) {
+				if ( ! elements[ i ].getName().endsWith( ".class" ) ) {
+					continue;
+				}
+
+				applyClassFile( elements[ i ], indexer );
+			}
+			else if ( elements[ i ].isDirectory() ) {
+				internalApplyDirectory( elements[ i ], indexer );
+			}
+		}
+	}
+
+	private static void applyClassFile(File file, Indexer indexer) {
+		assert file.isFile();
+		assert file.exists();
+
+		try ( final FileInputStream inputStream = new FileInputStream( file ) ) {
+			indexer.index( inputStream );
+		}
+		catch (FileNotFoundException e) {
+			// will never happen since we've already verified that the file exists
+		}
+		catch (IOException e) {
+			throw new GradleException( "Unable apply class file to index : " + file.getAbsolutePath(), e );
 		}
 	}
 }

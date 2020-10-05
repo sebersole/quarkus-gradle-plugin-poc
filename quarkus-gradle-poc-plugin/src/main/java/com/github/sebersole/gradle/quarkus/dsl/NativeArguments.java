@@ -1,6 +1,7 @@
-package com.github.sebersole.gradle.quarkus;
+package com.github.sebersole.gradle.quarkus.dsl;
 
 /**
+ * ???
  */
 public class NativeArguments {
 	private boolean containerBuild;

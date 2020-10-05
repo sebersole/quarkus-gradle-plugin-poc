@@ -8,8 +8,10 @@ package com.github.sebersole.gradle.quarkus;
 
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 
 /**
@@ -40,8 +42,7 @@ public class TestHelper {
 		return new File( quarkusOutputDir, "jandex" );
 	}
 
-	public static GradleRunner createGradleRunner(String projectPath) {
-
+	public static GradleRunner createGradleRunner(String projectPath, String... tasks) {
 		final File projectsBaseDirectory = testProjectsBaseDirectory();
 		final File projectDirectory = new File( projectsBaseDirectory, projectPath );
 
@@ -51,22 +52,20 @@ public class TestHelper {
 		);
 		final File testKitDir = new File( tempDir, "test-kit" );
 
-		final GradleRunner gradleRunner = GradleRunner.create();
-		return gradleRunner
+		final GradleRunner gradleRunner = GradleRunner.create()
 				.withPluginClasspath()
 				.withProjectDir( projectDirectory )
 				.withTestKitDir( testKitDir )
 				.forwardOutput()
-				.withDebug( true )
-				.withPluginClasspath();
-	}
+				.withDebug( true );
 
-	static void logRunnerOutput(BuildResult buildResult) {
-		System.out.println( "----------------------------------------------------------" );
-		System.out.println( "Gradle build output --------------------------------------" );
-		System.out.println( "----------------------------------------------------------" );
-		System.out.println( buildResult.getOutput() );
-		System.out.println( "----------------------------------------------------------" );
-		System.out.println( "----------------------------------------------------------" );
+		if ( tasks == null ) {
+			return gradleRunner.withArguments( "--stacktrace" );
+		}
+		else {
+			final List<String> arguments = new ArrayList<>( Arrays.asList( tasks ) );
+			arguments.add( "--stacktrace" );
+			return gradleRunner.withArguments( arguments );
+		}
 	}
 }

@@ -1,5 +1,6 @@
-package com.github.sebersole.gradle.quarkus.dependency;
+package com.github.sebersole.gradle.quarkus.indexing;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -10,9 +11,11 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 
 /**
- * @author Steve Ebersole
+ * Represents the Jandex Index over all dependencies.  The plugin never
+ * uses this one directly, but Jandex itself does sometimes need access to
+ * larger indexes
  */
-public class MutableCompositeIndex implements IndexView {
+public class MutableCompositeIndex implements IndexView, Serializable {
 	private IndexView delegate;
 
 	public void expand(IndexView addition) {
@@ -26,10 +29,6 @@ public class MutableCompositeIndex implements IndexView {
 		else {
 			delegate = CompositeIndex.create( delegate, addition );
 		}
-	}
-
-	public void expand(ResolvedDependency dependency) {
-		expand( dependency.getJandexIndexAccess().get() );
 	}
 
 	@Override

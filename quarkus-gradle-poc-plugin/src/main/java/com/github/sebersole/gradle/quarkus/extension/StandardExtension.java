@@ -2,26 +2,22 @@ package com.github.sebersole.gradle.quarkus.extension;
 
 import java.io.Serializable;
 
-import com.github.sebersole.gradle.quarkus.QuarkusDslImpl;
+import org.gradle.api.artifacts.Configuration;
+
+import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency;
+import com.github.sebersole.gradle.quarkus.service.Services;
 
 /**
  * Standard DSL implementation for configuring Quarkus extensions
- *
- * @author Steve Ebersole
  */
 public class StandardExtension extends AbstractExtension implements Serializable {
-	public StandardExtension(String dslContainerName, QuarkusDslImpl quarkusDsl) {
-		super(
-				dslContainerName,
-				StandardExtension::extensionArtifact,
-				StandardExtension::extensionArtifact,
-				quarkusDsl
-		);
-	}
-
-	protected static Artifact extensionArtifact(Extension extension, QuarkusDslImpl quarkusDsl) {
-		assert extension instanceof StandardExtension;
-
-		return new Artifact();
+	public StandardExtension(
+			String dslContainerName,
+			ResolvedDependency runtimeArtifact,
+			ResolvedDependency deploymentArtifact,
+			Configuration runtimeDependencies,
+			Configuration deploymentDependencies,
+			Services services) {
+		super( dslContainerName, runtimeArtifact, deploymentArtifact, runtimeDependencies, deploymentDependencies, services );
 	}
 }

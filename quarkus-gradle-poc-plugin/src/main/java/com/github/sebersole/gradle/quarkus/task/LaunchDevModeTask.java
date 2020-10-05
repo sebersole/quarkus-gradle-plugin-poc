@@ -3,19 +3,19 @@ package com.github.sebersole.gradle.quarkus.task;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 
-import com.github.sebersole.gradle.quarkus.QuarkusDsl;
+import com.github.sebersole.gradle.quarkus.dsl.QuarkusConfig;
 
 /**
- * @author Steve Ebersole
+ * Placeholder for "dev mode"
  */
 public class LaunchDevModeTask extends DefaultTask {
-	public LaunchDevModeTask(QuarkusDsl quarkusDsl) {
-		dependsOn( AugmentationTask.TASK_NAME );
+	public LaunchDevModeTask(QuarkusConfig quarkusConfig) {
+		dependsOn( AugmentationTask.REGISTRATION_NAME );
 	}
 
 	@TaskAction
 	public void launchDevMode() {
-		getLogger().lifecycle( "Launching Quarkus dev-mode" );
+		getLogger().trace( "Launching Quarkus dev-mode" );
 
 		throw new UnsupportedOperationException( "Not yet implemented" );
 	}

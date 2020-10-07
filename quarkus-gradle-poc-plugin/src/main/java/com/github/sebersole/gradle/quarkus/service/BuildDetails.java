@@ -1,17 +1,23 @@
 package com.github.sebersole.gradle.quarkus.service;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.Properties;
+import java.util.Set;
+
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 
 import com.github.sebersole.gradle.quarkus.Helper;
+import com.github.sebersole.gradle.quarkus.QuarkusConfigException;
 import com.github.sebersole.gradle.quarkus.dsl.NativeArguments;
-import com.github.sebersole.gradle.quarkus.service.Services;
 
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 
@@ -22,6 +28,8 @@ public class BuildDetails {
 	private final Provider<NativeArguments> nativeArgumentsProvider;
 
 	private final Project mainProject;
+	private final ProjectInfo mainProjectInfo;
+	private final Properties applicationProperties;
 
 	private final Configuration platforms;
 	private final Configuration runtimeDependencies;
@@ -42,6 +50,15 @@ public class BuildDetails {
 		nativeArgumentsProvider = mainProject.provider( () -> nativeArguments );
 
 		this.mainProject = mainProject;
+		this.mainProjectInfo = new ProjectInfo(
+				mainProject.getPath(),
+				mainProject.getGroup().toString(),
+				mainProject.getName(),
+				mainProject.getVersion().toString(),
+				mainProject.getLayout().getProjectDirectory(),
+				mainProject.getConvention().getPlugin( JavaPluginConvention.class )
+		);
+		this.applicationProperties = loadApplicationProperties( mainProjectInfo, services );
 
 		this.platforms = mainProject.getConfigurations().maybeCreate( "quarkusPlatforms" );
 		this.platforms.setDescription( "Configuration to specify all Quarkus platforms (BOMs) to be applied" );
@@ -67,6 +84,30 @@ public class BuildDetails {
 		);
 	}
 
+	private static Properties loadApplicationProperties(ProjectInfo mainProjectInfo, Services services) {
+		final Properties applicationProperties = new Properties();
+
+		// cheat a little and look at the source files
+		//    - this avoids an undesirable chicken-egg problem
+
+		final Set<File> resourceSrcDirs = mainProjectInfo.getMainSourceSet().getResources().getSrcDirs();
+		for ( File resourceSrcDir : resourceSrcDirs ) {
+			final File propFile = new File( new File( resourceSrcDir, "META-INF" ), "application.properties" );
+			if ( propFile.exists() ) {
+				try ( final FileInputStream stream = new FileInputStream( propFile ) ) {
+					applicationProperties.load( stream );
+					// use just the first...
+					break;
+				}
+				catch (Exception e) {
+					throw new QuarkusConfigException( "Unable to access `application.properties`" );
+				}
+			}
+		}
+
+		return applicationProperties;
+	}
+
 	public Services getServices() {
 		return services;
 	}
@@ -81,6 +122,14 @@ public class BuildDetails {
 
 	public Property<String> getQuarkusVersionProperty() {
 		return quarkusVersionProperty;
+	}
+
+	public ProjectInfo getMainProjectInfo() {
+		return mainProjectInfo;
+	}
+
+	public String getApplicationProperty(String name) {
+		return applicationProperties.getProperty( name );
 	}
 
 	public DirectoryProperty getWorkingDirectoryProperty() {

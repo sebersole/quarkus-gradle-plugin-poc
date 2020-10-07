@@ -1,30 +1,29 @@
 = Notes
 
+== Goals
+
+* The main goal is to make a more "Gradley" Gradle plugin, especially:
+  ** better leverage Gradle's up-to-date handling
+  ** better leverage Gradle's task dependency capability
+  ** more user-friendly DSL
+* Prefer build-script handling of deployment-only settings (`quarkus.datasource.db-kind` e.g.)
+* Seamless support for both Groovy and Kotlin based build scripts, especially IDE support for Kotlin scripts
+* Be fast :)
+
+
 == Design decisions
 
-* Extensions as `NamedDomainObjectContainer`.  Other option is to define specific config blocks for each extension which would require a-priori
-knowledge of all available extensions
-* At the moment, the extension blocks in the DSL are named based on their artifact name minus the `quarkus-` part.  E.g. `quarkus-hibernate-orm` ->
-`hibernate-orm`.  That makes for a somewhat awkward handling in the DSL because the names have to be quoted due to the dash (subtraction):
-```
-modules {
-    'hibernate-orm' {
-        databaseFamily 'derby'
-    }
-}
-```
-* Extensions container named "modules".  Gradle augments the class to implement `ExtensionContainer` which defines a method `#getExtensions` which
-precludes us being able to use that name.
-* 2 separate tasks - `GenerateJarTask` and `GenerateFatJarTask`.  Might be better to have a config option and just adjust the standard `jar` as needed
-based on that config value.
-* Modeled both Jandex-indexing and augmentation as separate tasks.  I made this choice for a number of reasons:
- ** Better leverage Gradle's up-to-date checking - faster.
- ** Possibly useful during development to verify output.
- ** Better model step dependencies as Task dependencies
-* At the moment I completely guessed regarding how we want to segment dependencies (per extension).  This will likely change
-as the functionality (tasks) are implemented and requirements become more clear.
+* Extensions modeled as `PolymorphicNamedDomainObjectContainer`:
+ ** allows special DSL handling for individual extensions
+ ** allows inclusion of arbitrary extensions
 
 
-== Clean-up
+== Current limitations
 
-* We need to go back and clean-up usages of Gradle's `Logger#lifecycle` method
+* There is a large list of limitations based on the fact that Quarkus really has no support for any tooling providing any of the pieces of the build.  For example,
+  even though the plugin has significantly better handling of Jandex indexes, there is no way to provide that Jandex index to Quarkus
+
+== Tasks
+
+* Clean up usages of Gradle's `Logger#lifecycle` method
+* Review use of exception types

@@ -3,13 +3,13 @@ package com.github.sebersole.gradle.quarkus.task;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 
-import com.github.sebersole.gradle.quarkus.dsl.QuarkusConfig;
+import com.github.sebersole.gradle.quarkus.dsl.QuarkusSpec;
 
 /**
  * Placeholder for "dev mode"
  */
 public class LaunchDevModeTask extends DefaultTask {
-	public LaunchDevModeTask(QuarkusConfig quarkusConfig) {
+	public LaunchDevModeTask(QuarkusSpec quarkusSpec) {
 		dependsOn( AugmentationTask.REGISTRATION_NAME );
 	}
 

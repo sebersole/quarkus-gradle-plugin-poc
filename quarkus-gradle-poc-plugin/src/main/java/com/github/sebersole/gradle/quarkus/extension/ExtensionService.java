@@ -11,7 +11,7 @@ import org.gradle.api.PolymorphicDomainObjectContainer;
 import com.github.sebersole.gradle.quarkus.Logging;
 import com.github.sebersole.gradle.quarkus.dependency.ModuleIdentifier;
 import com.github.sebersole.gradle.quarkus.dependency.StrictModuleIdentifierComparator;
-import com.github.sebersole.gradle.quarkus.dsl.ExtensionConfig;
+import com.github.sebersole.gradle.quarkus.dsl.ExtensionSpec;
 import com.github.sebersole.gradle.quarkus.service.Services;
 
 /**
@@ -28,15 +28,15 @@ public class ExtensionService implements Serializable {
 		this.extensionsByModule = new TreeMap<>( new StrictModuleIdentifierComparator() );
 	}
 
-	public void resolve(PolymorphicDomainObjectContainer<ExtensionConfig> extensionConfigs) {
+	public void resolve(PolymorphicDomainObjectContainer<? extends ExtensionSpec> extensionSpecs) {
 		// `extensionConfigs` contains all of the explicitly declared extensions...
 		// resolve them, including their dependencies.  Resolving the dependencies
 		// may trigger implicit extensions (recursive)
 
-		extensionConfigs.forEach(
-				extensionConfig -> {
+		extensionSpecs.forEach(
+				extensionSpec -> {
 					//noinspection rawtypes
-					final Extension extension = ((Convertible) extensionConfig).convert( services );
+					final Extension extension = ((Convertible) extensionSpec).convert( services );
 
 					// register the extension and then resolve its dependencies
 					services.getExtensionService().registerExtension( extension );

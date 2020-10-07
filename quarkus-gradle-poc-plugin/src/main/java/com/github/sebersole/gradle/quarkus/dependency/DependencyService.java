@@ -26,7 +26,7 @@ public class DependencyService implements Service<DependencyService>, Serializab
 	public DependencyService(Services services) {
 		this.services = services;
 
-		final ProjectInfo mainProjectInfo = services.getProjectService().getMainProject();
+		final ProjectInfo mainProjectInfo = services.getProjectService().getMainProjectInfo();
 		final ProjectDependency projectDependency = new ProjectDependency(
 				mainProjectInfo,
 				resolvedDependency -> {

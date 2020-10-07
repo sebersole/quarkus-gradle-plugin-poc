@@ -44,12 +44,10 @@ quarkus {
         // requested
     }
 
-    quarkusExtensions {
+    extensionSpecs {
 // Grrr... https://discuss.gradle.org/t/what-is-up-with-this-forum-and-its-silly-title-problem/37648
-//        orm(HibernateOrmExtension) {
-//            // ...
-//        }
-        hibernateOrm() {
+//        hibernateOrm() {
+        orm(HibernateOrmExtensionSpec) {
             databaseFamily = 'derby'
 
             persistenceUnits {
@@ -66,9 +64,9 @@ quarkus {
 
         quarkusExtension( 'hibernate-validator' )
 
-        jodaTime {
-            artifact 'joda-time:joda-time:2.10.6'
-        }
+//        jodaTime {
+//            artifact 'joda-time:joda-time:2.10.6'
+//        }
 
         extension( 'junitJupiter' ) {
             artifact 'org.junit.jupiter:junit-jupiter-api:5.3.1'

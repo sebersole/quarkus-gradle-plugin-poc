@@ -9,7 +9,7 @@ import org.gradle.api.plugins.JavaLibraryPlugin;
 import org.gradle.api.tasks.TaskState;
 import org.gradle.util.GradleVersion;
 
-import com.github.sebersole.gradle.quarkus.dsl.QuarkusConfig;
+import com.github.sebersole.gradle.quarkus.dsl.QuarkusSpec;
 import com.github.sebersole.gradle.quarkus.service.Services;
 import com.github.sebersole.gradle.quarkus.task.AugmentationTask;
 import com.github.sebersole.gradle.quarkus.task.GenerateFatJarTask;
@@ -31,11 +31,12 @@ public class QuarkusPlugin implements Plugin<Project> {
 
 		final Services services = new Services( project );
 
-		final QuarkusConfig quarkusConfig = project.getExtensions().create(
+		final QuarkusSpec quarkusSpec = project.getExtensions().create(
 				QUARKUS,
-				QuarkusConfig.class,
+				QuarkusSpec.class,
 				services
 		);
+
 
 		final JandexTask jandexTask = JandexTask.applyTo( project, services );
 		jandexTask.setGroup( QUARKUS );
@@ -65,7 +66,7 @@ public class QuarkusPlugin implements Plugin<Project> {
 					//			trigger these same actions recursively on that implicit extension)
 					//		* others per specific type of extension.  e.g. the Hibernate ORM extension will
 					//			resolve and register persistence units
-					services.getExtensionService().resolve( quarkusConfig.getExtensionsConfig().getExtensionsContainer() );
+					services.getExtensionService().resolve( quarkusSpec.getExtensionSpecs() );
 				}
 		);
 

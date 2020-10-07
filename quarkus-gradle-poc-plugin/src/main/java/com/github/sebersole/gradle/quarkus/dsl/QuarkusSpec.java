@@ -1,6 +1,8 @@
 package com.github.sebersole.gradle.quarkus.dsl;
 
 import org.gradle.api.Action;
+import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer;
+import org.gradle.api.PolymorphicDomainObjectContainer;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
@@ -17,17 +19,25 @@ import groovy.lang.Closure;
  * Gradle DSL extension for configuring the Quarkus build.
  */
 @SuppressWarnings( { "unused", "RedundantSuppression" } )
-public class QuarkusConfig {
+public class QuarkusSpec {
 	private final Project project;
 	private final BuildDetails buildDetails;
 
-	private final ExtensionsConfig extensionsConfig;
+	private final ExtensionSpecContainer extensionSpecs;
+	private ExtensionsClosureDelegate extensionsClosureDelegate;
 
-	public QuarkusConfig(Services services) {
+	public QuarkusSpec(Services services) {
 		this.buildDetails = services.getBuildDetails();
 		this.project = buildDetails.getMainProject();
 
-		this.extensionsConfig = new ExtensionsConfig( buildDetails );
+		this.extensionSpecs = new ExtensionSpecContainer( buildDetails );
+	}
+
+	private ExtensionsClosureDelegate extensionsClosureDelegate() {
+		if ( extensionsClosureDelegate == null ) {
+			extensionsClosureDelegate = new ExtensionsClosureDelegate( buildDetails, extensionSpecs );
+		}
+		return extensionsClosureDelegate;
 	}
 
 	public Property<String> getQuarkusVersion() {
@@ -92,23 +102,40 @@ public class QuarkusConfig {
 		action.execute( dependency );
 	}
 
-	public ExtensionsConfig getExtensionsConfig() {
-		return extensionsConfig;
+	public ExtensiblePolymorphicDomainObjectContainer<? extends ExtensionSpec> getExtensionSpecs() {
+		return extensionSpecs.getContainer();
 	}
 
-	public void extensions(Closure<ExtensionsConfig> extensionClosure) {
-		ConfigureUtil.configure( extensionClosure, extensionsConfig );
+	public void extensionSpecs(Action<ExtensiblePolymorphicDomainObjectContainer<? extends ExtensionSpec>> action) {
+		action.execute( extensionSpecs.getContainer() );
 	}
 
-	public void extensions(Action<ExtensionsConfig> action) {
-		action.execute( extensionsConfig );
+//	public void extensionSpecs(Closure<PolymorphicDomainObjectContainer<? extends ExtensionSpec>> extensionClosure) {
+//		ConfigureUtil.configure( extensionClosure, extensionSpecs.getContainer() );
+//	}
+
+	/**
+	 * Groovy DSL hook
+	 */
+	public void extensions(Closure<PolymorphicDomainObjectContainer<? extends ExtensionSpec>> extensionClosure) {
+		extensionClosure.setDelegate( extensionsClosureDelegate() );
+		extensionClosure.setResolveStrategy( Closure.DELEGATE_FIRST );
+		extensionClosure.call( extensionSpecs.getContainer() );
+//		ConfigureUtil.configure( extensionClosure, extensionSpecs.getContainer() );
 	}
 
-	public void quarkusExtensions(Closure<ExtensionsConfig> extensionClosure) {
+	/**
+	 * Groovy DSL hook
+	 */
+	public void quarkusExtensions(Closure<PolymorphicDomainObjectContainer<? extends ExtensionSpec>> extensionClosure) {
 		extensions( extensionClosure );
 	}
 
-	public void quarkusExtensions(Action<ExtensionsConfig> action) {
-		extensions( action );
+	/**
+	 * Kotlin DSL hook
+	 */
+	public void extensions(Action<ExtensionSpecContainer> action) {
+		action.execute( extensionSpecs );
 	}
+
 }

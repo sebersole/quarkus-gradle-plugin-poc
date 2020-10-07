@@ -28,7 +28,7 @@ import static com.github.sebersole.gradle.quarkus.extension.ExtensionCreationSup
  * extension-config into its Extension to resolve the runtime/deployment artifact
  * plus any of the "extra" dependencies
  */
-public abstract class AbstractExtensionConfig implements ExtensionConfig, Convertible<Extension> {
+public abstract class AbstractExtensionSpec implements ExtensionSpec, Convertible<Extension> {
 	private final String name;
 	private final BuildDetails buildDetails;
 
@@ -36,14 +36,14 @@ public abstract class AbstractExtensionConfig implements ExtensionConfig, Conver
 
 	private Dependency runtimeArtifact;
 
-	public AbstractExtensionConfig(String name, BuildDetails buildDetails) {
+	public AbstractExtensionSpec(String name, BuildDetails buildDetails) {
 		this.name = name;
 		this.buildDetails = buildDetails;
 		this.runtimeDependencies = createRuntimeDependencyConfiguration( name, buildDetails );
 
 	}
 
-	public AbstractExtensionConfig(
+	public AbstractExtensionSpec(
 			String name,
 			BuildDetails buildDetails,
 			Object runtimeArtifactNotation) {

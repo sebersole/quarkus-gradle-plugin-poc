@@ -32,14 +32,15 @@ import groovy.lang.Closure;
  * Hibernate ORM specific ExtensionConfig providing support for configuring JPA persistence units
  */
 @SuppressWarnings( "UnstableApiUsage" )
-public class HibernateOrmExtensionConfig extends AbstractExtensionConfig {
+public class HibernateOrmExtensionSpec extends AbstractExtensionSpec {
 	public static final String CONTAINER_NAME = "hibernateOrm";
 	public static final String ARTIFACT_NAME = Helper.QUARKUS + "-hibernate-orm";
+	public static final String DB_FAM_PROP_KEY = "quarkus.datasource.db-kind";
 
 	private final Property<String> databaseFamily;
-	private final NamedDomainObjectContainer<PersistenceUnitConfig> persistenceUnits;
+	private final NamedDomainObjectContainer<PersistenceUnitSpec> persistenceUnits;
 
-	public HibernateOrmExtensionConfig(String name, BuildDetails buildDetails) {
+	public HibernateOrmExtensionSpec(String name, BuildDetails buildDetails) {
 		super(
 				CONTAINER_NAME,
 				buildDetails,
@@ -58,15 +59,14 @@ public class HibernateOrmExtensionConfig extends AbstractExtensionConfig {
 		final ObjectFactory objectFactory = mainProject.getObjects();
 
 		this.databaseFamily = objectFactory.property( String.class );
-		// todo : do we want a "default"?  e.g.
-		//this.databaseFamily.convention( "h2" );
+		this.databaseFamily.convention( buildDetails.getMainProject().provider( () -> buildDetails.getApplicationProperty( DB_FAM_PROP_KEY ) ) );
 
 		this.persistenceUnits = objectFactory.domainObjectContainer(
-				PersistenceUnitConfig.class,
+				PersistenceUnitSpec.class,
 				(unitName) -> {
-					final PersistenceUnitConfig persistenceUnitConfig = new PersistenceUnitConfig( unitName, buildDetails );
-					getRuntimeDependencies().extendsFrom( persistenceUnitConfig.getDependencies() );
-					return persistenceUnitConfig;
+					final PersistenceUnitSpec persistenceUnitSpec = new PersistenceUnitSpec( unitName, buildDetails );
+					getRuntimeDependencies().extendsFrom( persistenceUnitSpec.getDependencies() );
+					return persistenceUnitSpec;
 				}
 		);
 
@@ -78,13 +78,17 @@ public class HibernateOrmExtensionConfig extends AbstractExtensionConfig {
 		return databaseFamily;
 	}
 
+	public void setDatabaseFamily(String family) {
+		this.databaseFamily.set( family );
+	}
+
 	@SuppressWarnings( { "unused", "RedundantSuppression" } )
-	public void persistenceUnits(Closure<NamedDomainObjectContainer<PersistenceUnitConfig>> closure) {
+	public void persistenceUnits(Closure<NamedDomainObjectContainer<PersistenceUnitSpec>> closure) {
 		ConfigureUtil.configure( closure, persistenceUnits );
 	}
 
 	@SuppressWarnings( { "unused", "RedundantSuppression" } )
-	public void persistenceUnits(Action<NamedDomainObjectContainer<PersistenceUnitConfig>> action) {
+	public void persistenceUnits(Action<NamedDomainObjectContainer<PersistenceUnitSpec>> action) {
 		action.execute( persistenceUnits );
 	}
 
@@ -94,6 +98,8 @@ public class HibernateOrmExtensionConfig extends AbstractExtensionConfig {
 		if ( appliedDatabaseFamily == null ) {
 			throw new QuarkusConfigException( "No database-family was specified for hibernate-orm extension" );
 		}
+
+		services.getBuildDetails().getMainProject().getLogger().debug( "Applying database-family : {}", appliedDatabaseFamily.simpleName );
 
 		final Extension extension = super.convert( services );
 
@@ -141,18 +147,18 @@ public class HibernateOrmExtensionConfig extends AbstractExtensionConfig {
 	 * NamedDomainObjectFactory implementation for the Hibernate ORM extension
 	 * providing (delayed) singleton access
 	 */
-	public static class Factory implements NamedDomainObjectFactory<HibernateOrmExtensionConfig> {
+	public static class Factory implements NamedDomainObjectFactory<HibernateOrmExtensionSpec> {
 		private final BuildDetails buildDetails;
-		private HibernateOrmExtensionConfig singleton;
+		private HibernateOrmExtensionSpec singleton;
 
 		public Factory(BuildDetails buildDetails) {
 			this.buildDetails = buildDetails;
 		}
 
 		@Override
-		public HibernateOrmExtensionConfig create(String dslName) {
+		public HibernateOrmExtensionSpec create(String dslName) {
 			if ( singleton == null ) {
-				singleton = new HibernateOrmExtensionConfig( dslName, buildDetails );
+				singleton = new HibernateOrmExtensionSpec( dslName, buildDetails );
 			}
 
 			return singleton;

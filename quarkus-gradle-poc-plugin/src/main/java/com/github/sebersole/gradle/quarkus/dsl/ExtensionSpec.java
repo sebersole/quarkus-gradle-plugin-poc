@@ -9,7 +9,7 @@ import groovy.lang.Closure;
 /**
  * Standard DSL contract for defining and configuring an extension
  */
-public interface ExtensionConfig extends Named {
+public interface ExtensionSpec extends Named {
 	/**
 	 * The name used for this Extension in the Quarkus DSL extensions container
 	 */

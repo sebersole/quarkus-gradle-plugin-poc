@@ -15,7 +15,7 @@ import com.github.sebersole.gradle.quarkus.dependency.DependencyHelper;
 import com.github.sebersole.gradle.quarkus.dependency.ModuleVersionIdentifier;
 import com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency;
 import com.github.sebersole.gradle.quarkus.dependency.StandardModuleVersionIdentifier;
-import com.github.sebersole.gradle.quarkus.dsl.PersistenceUnitConfig;
+import com.github.sebersole.gradle.quarkus.dsl.PersistenceUnitSpec;
 import com.github.sebersole.gradle.quarkus.service.Service;
 import com.github.sebersole.gradle.quarkus.service.Services;
 
@@ -25,7 +25,7 @@ import static com.github.sebersole.gradle.quarkus.jpa.PersistenceUnitResolutionS
  * Service for JPA persistence-units
  */
 public class PersistenceUnitService implements Service<PersistenceUnitService> {
-	public static void from(NamedDomainObjectContainer<PersistenceUnitConfig> persistenceUnitConfigs, Services services) {
+	public static void from(NamedDomainObjectContainer<PersistenceUnitSpec> persistenceUnitSpecs, Services services) {
 		final Map<String,PersistenceUnit> persistenceUnits = new HashMap<>();
 
 		final BuildDetails buildDetails = services.getBuildDetails();
@@ -34,7 +34,7 @@ public class PersistenceUnitService implements Service<PersistenceUnitService> {
 
 		final AtomicBoolean wasMainProjectExplicitlyReferenced = new AtomicBoolean();
 
-		persistenceUnitConfigs.forEach(
+		persistenceUnitSpecs.forEach(
 				unitConfig -> {
 					assert !persistenceUnits.containsKey( unitConfig.getUnitName() );
 

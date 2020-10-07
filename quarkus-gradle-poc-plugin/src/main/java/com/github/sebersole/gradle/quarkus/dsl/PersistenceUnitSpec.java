@@ -11,14 +11,14 @@ import groovy.lang.Closure;
 /**
  * Configuration for a single persistence-unit
  */
-public class PersistenceUnitConfig implements Named {
+public class PersistenceUnitSpec implements Named {
 	private final String unitName;
 	private final BuildDetails buildDetails;
 
 	private final String dependenciesConfigName;
 	private final Configuration dependencies;
 
-	public PersistenceUnitConfig(String unitName, BuildDetails buildDetails) {
+	public PersistenceUnitSpec(String unitName, BuildDetails buildDetails) {
 		this.unitName = unitName;
 		this.buildDetails = buildDetails;
 		this.dependenciesConfigName = determineConfigurationName( unitName );

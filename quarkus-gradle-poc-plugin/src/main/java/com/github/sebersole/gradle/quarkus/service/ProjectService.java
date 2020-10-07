@@ -15,19 +15,11 @@ import com.github.sebersole.gradle.quarkus.dependency.ModuleVersionIdentifier;
  * Provides access to details about the projects
  */
 public class ProjectService implements Service<ProjectService> {
-	private final ProjectInfo mainProject;
+	private final ProjectInfo mainProjectInfo;
 	private final Map<String, ProjectInfo> subProjectByName = new HashMap<>();
 
-	public ProjectService(Project mainProject) {
-		this.mainProject = new ProjectInfo(
-				mainProject.getPath(),
-				mainProject.getGroup().toString(),
-				mainProject.getName(),
-				mainProject.getVersion().toString(),
-				mainProject.getLayout().getProjectDirectory(),
-				mainProject.getConvention().findPlugin( JavaPluginConvention.class )
-		);
-
+	public ProjectService(Project mainProject, ProjectInfo mainProjectInfo) {
+		this.mainProjectInfo = mainProjectInfo;
 		mainProject.subprojects(
 				project -> {
 					final ProjectInfo subProjectInfo = new ProjectInfo(
@@ -44,7 +36,7 @@ public class ProjectService implements Service<ProjectService> {
 	}
 
 	public ProjectService(BuildDetails buildDetails) {
-		this( buildDetails.getMainProject() );
+		this( buildDetails.getMainProject(), buildDetails.getMainProjectInfo() );
 	}
 
 	@Override
@@ -52,8 +44,8 @@ public class ProjectService implements Service<ProjectService> {
 		return ProjectService.class;
 	}
 
-	public ProjectInfo getMainProject() {
-		return mainProject;
+	public ProjectInfo getMainProjectInfo() {
+		return mainProjectInfo;
 	}
 
 	public void visitSubProjects(Consumer<ProjectInfo> subProjectConsumer) {
@@ -63,7 +55,7 @@ public class ProjectService implements Service<ProjectService> {
 	}
 
 	public void visitAllProjects(Consumer<ProjectInfo> subProjectConsumer) {
-		subProjectConsumer.accept( mainProject );
+		subProjectConsumer.accept( mainProjectInfo );
 		visitSubProjects( subProjectConsumer );
 	}
 
@@ -72,8 +64,8 @@ public class ProjectService implements Service<ProjectService> {
 	}
 
 	private ProjectInfo firstFromProjects(Predicate<ProjectInfo> matcher) {
-		if ( matcher.test( mainProject ) ) {
-			return mainProject;
+		if ( matcher.test( mainProjectInfo ) ) {
+			return mainProjectInfo;
 		}
 
 		for ( Map.Entry<String, ProjectInfo> entry : subProjectByName.entrySet() ) {
@@ -98,8 +90,8 @@ public class ProjectService implements Service<ProjectService> {
 			return matched;
 		}
 
-		if ( mainProject.getModuleIdentifier().getArtifactName().equals( identifier.getArtifactName() ) ) {
-			return mainProject;
+		if ( mainProjectInfo.getModuleIdentifier().getArtifactName().equals( identifier.getArtifactName() ) ) {
+			return mainProjectInfo;
 		}
 
 		return null;

@@ -92,7 +92,7 @@ public abstract class JandexTask extends DefaultTask {
 	public SourceSetOutput getIndexedProjectOutput() {
 		// todo : need to figure out the best way to apply this to multiple projects.
 		//		- one option is to generate a task per project-to-be-indexed
-		return services.getProjectService().getMainProject().getMainSourceSet().getOutput();
+		return services.getProjectService().getMainProjectInfo().getMainSourceSet().getOutput();
 	}
 
 	@TaskAction
@@ -142,7 +142,7 @@ public abstract class JandexTask extends DefaultTask {
 
 	private void manageProjectIndexes(Set<String> existingIndexFiles, InputChanges inputChanges) {
 		final IndexManager indexManager = services.getIndexingService().findIndexManagerByBase(
-				services.getProjectService().getMainProject().getProjectDirectory().getAsFile()
+				services.getProjectService().getMainProjectInfo().getProjectDirectory().getAsFile()
 		);
 
 		assert indexManager != null;

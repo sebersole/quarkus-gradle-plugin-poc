@@ -19,6 +19,7 @@ public class Services {
 	private final ProjectService projectService;
 	private final IndexingService indexingService;
 	private final DependencyService dependencyService;
+
 	private final ExtensionService extensionService;
 
 	private Map<Class<?>, Object> additionalServices;
@@ -26,9 +27,10 @@ public class Services {
 	public Services(Project project) {
 		this.buildDetails = new BuildDetails( project, this );
 
-		this.projectService = new ProjectService( getBuildDetails() );
+		this.projectService = new ProjectService( buildDetails );
 		this.indexingService = new IndexingService( this );
 		this.dependencyService = new DependencyService( this );
+
 		this.extensionService = new ExtensionService( this );
 	}
 

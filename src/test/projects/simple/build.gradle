@@ -12,12 +12,10 @@ ext {
 }
 
 dependencies {
-    // 3rd way (you'll get the joke later) to specify a Quarkus platform.
+    // 3rd way to specify a Quarkus platform.
+    // functionally the same as `platforms { quarkusUniverse() }`
+
     // see discussion in `platforms {}`
-
-    // here again, we have functionally the same as `platforms { quarkusUniverse() }`
-
-    // example of a non-core BOM
     quarkusPlatforms enforcedPlatform( "io.quarkus:quarkus-universe-bom:${project.quarkusVersion}" )
 }
 

@@ -43,50 +43,49 @@ public class ExtensionCreationSupport {
 
 		final com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency extensionRuntimeArtifact = extension.getArtifact();
 
+
 		// visit each runtime dependency for the artifact...
-		extension.getRuntimeDependencies().getResolvedConfiguration().getResolvedArtifacts().forEach(
-				resolvedArtifact -> {
-					final ModuleVersionIdentifier artifactIdentifier = new StandardModuleVersionIdentifier( resolvedArtifact );
-					final com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency resolvedRuntimeDependency = DependencyHelper.registerDependency( artifactIdentifier, resolvedArtifact, services );
+		extension.getRuntimeDependencies().getResolvedConfiguration().getResolvedArtifacts().forEach( (resolvedArtifact) -> {
+			final ModuleVersionIdentifier artifactIdentifier = new StandardModuleVersionIdentifier( resolvedArtifact );
+			final com.github.sebersole.gradle.quarkus.dependency.ResolvedDependency resolvedRuntimeDependency = DependencyHelper.registerDependency( artifactIdentifier, resolvedArtifact, services );
 
-					// todo : should this comparison be based on `group:artifact` rather than `group:artifact:version`?
-					//		really we should never have conflicting "module versions", right?
-					if ( Objects.equals( artifactIdentifier, extensionRuntimeArtifact.getModuleVersionIdentifier() ) ) {
-						// `resolvedArtifact` is the extension's runtime artifact
-						final Object marker = extractExtensionMarker( resolvedArtifact );
-						if ( marker == null ) {
-							Logging.LOGGER.warn(
-									String.format(
-											Locale.ROOT,
-											"Extension artifact did not define extension marker (%s) : %s (%s)",
-											EXTENSION_PROP_FILE,
-											extension.getDslName(),
-											resolvedArtifact.getId().getComponentIdentifier().getDisplayName()
-									)
-							);
-						}
-					}
-					else if ( isExtension( resolvedArtifact ) ) {
-						// `resolvedArtifact` is an implied extension - create an extension if
-						// 		there is not already one
-
-						final Extension existing = extensionService.findByModule( artifactIdentifier );
-						if ( existing == null ) {
-							// create one...
-							final Extension transitiveExtension = ImplicitExtension.from( artifactIdentifier, resolvedRuntimeDependency, services );
-
-							extensionService.registerExtension( transitiveExtension );
-
-							services.getBuildDetails().getMainProject().getDependencies().add(
-									transitiveExtension.getRuntimeDependencies().getName(),
-									artifactIdentifier.groupArtifactVersion()
-							);
-
-							ExtensionCreationSupport.resolveDependencies( transitiveExtension, services );
-						}
-					}
+			// todo : should this comparison be based on `group:artifact` rather than `group:artifact:version`?
+			//		really we should never have conflicting "module versions", right?
+			if ( Objects.equals( artifactIdentifier, extensionRuntimeArtifact.getModuleVersionIdentifier() ) ) {
+				// `resolvedArtifact` is the extension's runtime artifact
+				final Object marker = extractExtensionMarker( resolvedArtifact );
+				if ( marker == null ) {
+					Logging.LOGGER.warn(
+							String.format(
+									Locale.ROOT,
+									"Extension artifact did not define extension marker (%s) : %s (%s)",
+									EXTENSION_PROP_FILE,
+									extension.getDslName(),
+									resolvedArtifact.getId().getComponentIdentifier().getDisplayName()
+							)
+					);
 				}
-		);
+			}
+			else if ( isExtension( resolvedArtifact ) ) {
+				// `resolvedArtifact` is an implied extension - create an extension if
+				// 		there is not already one
+
+				final Extension existing = extensionService.findByModule( artifactIdentifier );
+				if ( existing == null ) {
+					// create one...
+					final Extension transitiveExtension = ImplicitExtension.from( artifactIdentifier, resolvedRuntimeDependency, services );
+
+					extensionService.registerExtension( transitiveExtension );
+
+					services.getBuildDetails().getMainProject().getDependencies().add(
+							transitiveExtension.getRuntimeDependencies().getName(),
+							artifactIdentifier.groupArtifactVersion()
+					);
+
+					ExtensionCreationSupport.resolveDependencies( transitiveExtension, services );
+				}
+			}
+		} );
 	}
 
 

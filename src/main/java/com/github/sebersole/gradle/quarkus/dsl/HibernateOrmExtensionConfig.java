@@ -78,6 +78,10 @@ public class HibernateOrmExtensionConfig extends AbstractExtensionConfig {
 		return databaseFamily;
 	}
 
+	public void setDatabaseFamily(String family) {
+		this.databaseFamily.set( family );
+	}
+
 	@SuppressWarnings( { "unused", "RedundantSuppression" } )
 	public void persistenceUnits(Closure<NamedDomainObjectContainer<PersistenceUnitConfig>> closure) {
 		ConfigureUtil.configure( closure, persistenceUnits );

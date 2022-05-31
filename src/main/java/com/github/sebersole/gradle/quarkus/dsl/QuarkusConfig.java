@@ -27,6 +27,11 @@ public class QuarkusConfig {
 		this.buildDetails = services.getBuildDetails();
 		this.project = buildDetails.getMainProject();
 
+		// NOTE : we avoid having Gradle instantiate this for us so
+		// it does not end up implementing `ExtensionAware` which
+		// in turn exposes a method `#getExtensions` which conflicts
+		// with how we'd like `getExtensions` to work here to mean
+		// Quarkus extensions
 		this.extensionsConfig = new ExtensionsConfig( buildDetails );
 	}
 

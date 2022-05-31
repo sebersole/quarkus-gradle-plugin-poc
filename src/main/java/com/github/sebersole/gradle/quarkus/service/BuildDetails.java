@@ -11,7 +11,6 @@ import org.gradle.api.provider.Provider;
 
 import com.github.sebersole.gradle.quarkus.Helper;
 import com.github.sebersole.gradle.quarkus.dsl.NativeArguments;
-import com.github.sebersole.gradle.quarkus.service.Services;
 
 import static com.github.sebersole.gradle.quarkus.Helper.QUARKUS;
 
